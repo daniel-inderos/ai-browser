@@ -65,8 +65,9 @@ ipcMain.handle('get-page-title', async (event, webContentsId) => {
 
 ipcMain.handle('navigate-to', async (event, url) => {
   try {
-    if (url === 'newtab.html') {
-      url = `file://${path.join(__dirname, 'newtab.html')}`;
+    if (url === 'newtab.html' || url.startsWith('newtab.html?')) {
+      const query = url.includes('?') ? url.substring(url.indexOf('?')) : '';
+      url = `file://${path.join(__dirname, 'newtab.html')}${query}`;
       return { success: true, url };
     }
     // Basic URL validation and formatting

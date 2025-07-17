@@ -169,6 +169,15 @@
                 window.addEventListener('message', (e) => {
                     if (!e.data || !e.data.type) return;
 
+                    const tabId = e.data.tabId;
+                    let sourceWebview = null;
+                    if (tabId) {
+                        sourceWebview = this.tabs.find(tab => tab.id === tabId);
+                    }
+                    if (!sourceWebview) {
+                        sourceWebview = this.tabs.find(tab => tab.webview.contentWindow === e.source);
+                    }
+
                     // Handle shortcut messages from newtab.html
                     if (e.data.type === 'shortcut') {
                         switch (e.data.command) {
@@ -187,24 +196,18 @@
                     }
 
                     // Handle tab context requests from newtab.html
-                    if (e.data.type === 'request-tabs') {
-                        const sourceWebview = this.tabs.find(tab => tab.webview.contentWindow === e.source);
-                        if (sourceWebview) {
+                    if (e.data.type === 'request-tabs' && sourceWebview) {
                             const tabData = this.tabs
                                 .filter(t => t.id !== sourceWebview.id && !t.url.includes('newtab.html'))
                                 .map(t => ({ id: t.id, title: t.title, url: t.url }));
-                            
+
                             // Use the webview's postMessage API to communicate with the guest page
                             sourceWebview.webview.postMessage({ type: 'tabs-response', tabs: tabData }, '*');
-                        }
                     }
 
                     // Handle chat requests from newtab.html
-                    if (e.data.type === 'new-tab-chat-send') {
-                        const sourceWebview = this.tabs.find(tab => tab.webview.contentWindow === e.source);
-                        if (sourceWebview) {
-                            this.handleNewTabChat(e.data, sourceWebview);
-                        }
+                    if (e.data.type === 'new-tab-chat-send' && sourceWebview) {
+                        this.handleNewTabChat(e.data, sourceWebview);
                     }
                 });
             }
@@ -366,11 +369,16 @@
                 const preloadPath = await window.electronAPI.getPreloadPath();
                 console.log('createTab called with url:', url);
                 const tabId = `tab-${++this.tabCounter}`;
+
+                let targetUrl = url;
+                if (url === 'newtab.html') {
+                    targetUrl = `newtab.html?tabId=${tabId}`;
+                }
                 
                 // Create tab object
                 const tab = {
                     id: tabId,
-                    url: url,
+                    url: targetUrl,
                     title: 'New Tab',
                     webview: null,
                     isLoading: false,
@@ -428,7 +436,7 @@
                 webview.setAttribute('preload', `file://${preloadPath}`);
                 webview.setAttribute('useragent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 AI-Browser/1.0');
                 webview.setAttribute('partition', 'persist:browser');
-                const result = await window.electronAPI.navigateTo(url);
+                const result = await window.electronAPI.navigateTo(targetUrl);
                 console.log('navigateTo result:', result);
                 if (result.success) {
                   tab.url = result.url;

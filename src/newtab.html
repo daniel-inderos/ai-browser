@@ -322,6 +322,7 @@
                 this.marked = window.marked;
                 this.availableTabs = [];
                 this.referencedTabs = new Set();
+                this.tabId = new URLSearchParams(window.location.search).get('tabId');
 
                 this.setupEventListeners();
                 this.updateInputPlaceholder();
@@ -422,7 +423,7 @@
                 const atIndex = value.lastIndexOf('@');
 
                 if (this.mode === 'ask' && atIndex > -1 && (atIndex === 0 || /\s/.test(value[atIndex - 1]))) {
-                    window.parent.postMessage({ type: 'request-tabs' }, '*');
+                    window.parent.postMessage({ type: 'request-tabs', tabId: this.tabId }, '*');
                 } else {
                     this.hideTabSuggestions();
                 }
@@ -531,6 +532,7 @@
                     reqId: reqId,
                     session: this.session.slice(0, -1),
                     referencedTabIds: referencedTabIds,
+                    tabId: this.tabId,
                 }, '*');
 
                 // The rest of the logic will be moved to a message listener
