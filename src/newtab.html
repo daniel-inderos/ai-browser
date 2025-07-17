@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Tab</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #000;
+            --input-bg: #fff;
+            --input-border: #ccc;
+            --input-focus-border: #333;
+            --btn-active-color: #000;
+            --btn-inactive-color: #888;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000;
+                --text-color: #fff;
+                --input-bg: #1a1a1a;
+                --input-border: #444;
+                --input-focus-border: #fff;
+                --btn-active-color: #fff;
+                --btn-inactive-color: #888;
+            }
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        /* --- Main containers --- */
+        .prompt-container, .chat-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            transition: opacity .3s ease, transform .3s ease;
+        }
+
+        .prompt-container {
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            opacity: 1;
+            transform: translateY(0);
+            z-index: 2;
+        }
+
+        .chat-container {
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        body.chat-active .prompt-container {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
+
+        body.chat-active .chat-container {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        /* --- Prompt View --- */
+        .prompt-wrapper {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-modes {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .mode-btn {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--btn-inactive-color);
+            padding: 0.5rem;
+            position: relative;
+        }
+
+        .mode-btn.active {
+            color: var(--btn-active-color);
+            font-weight: 600;
+        }
+
+        #mainForm {
+            width: 100%;
+            position: relative;
+        }
+
+        #mainInput {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.125rem;
+            border-radius: 9999px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-color);
+            outline: none;
+            transition: all .2s ease;
+        }
+
+        #mainInput:focus {
+            border-color: var(--input-focus-border);
+            box-shadow: 0 0 0 3px rgba(128,128,128,.1);
+        }
+
+        /* --- Chat View --- */
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .chat-input-area {
+            padding: 1rem;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .chat-input-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 9999px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-color);
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .chat-send-btn {
+            background: var(--btn-active-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* --- Chat Messages --- */
+        .chat-msg {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1.5rem;
+            max-width: 80%;
+        }
+        .user-msg {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+        .assistant-msg {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .chat-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--btn-inactive-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .chat-content {
+            padding: 0.5rem 0;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .chat-content p:last-child { margin-bottom: 0; }
+        
+        /* --- Context Pills & Suggestions --- */
+        .context-pills-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .context-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 9999px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            max-width: 200px;
+        }
+
+        .context-pill-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .context-pill-remove {
+            background: none;
+            border: none;
+            color: var(--btn-inactive-color);
+            cursor: pointer;
+            padding: 0;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        #tabSuggestions {
+            position: absolute;
+            bottom: calc(100% + 0.5rem);
+            left: 0;
+            right: 0;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            z-index: 10;
+            max-height: 220px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--input-border);
+        }
+        .suggestion-item:last-child { border-bottom: none; }
+        .suggestion-item:hover, .suggestion-item.selected { background: rgba(128,128,128,0.1); }
+        .suggestion-title { font-weight: 500; }
+        .suggestion-url { font-size: 0.8rem; color: var(--btn-inactive-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    </style>
+</head>
+<body>
+    <div class="prompt-container">
+        <div class="prompt-wrapper">
+            <div id="contextPillsContainer" class="context-pills-container"></div>
+            <div class="input-modes">
+                <button id="searchModeBtn" class="mode-btn active">Search</button>
+                <button id="askModeBtn" class="mode-btn">Ask</button>
+            </div>
+            <form id="mainForm" autocomplete="off">
+                <div id="tabSuggestions"></div>
+                <input id="mainInput" type="text" placeholder="Search anything..." autofocus />
+            </form>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-history" id="chatHistory"></div>
+        <div class="chat-input-area">
+            <form class="chat-input-container" id="chatInputForm" autocomplete="off">
+                <input id="chatInput" class="chat-input" type="text" placeholder="Ask a follow-up..." />
+                <button type="submit" class="chat-send-btn" id="chatSendBtn" aria-label="Send message">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 11l5-5 5 5M7 17l5-5 5 5"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        class NewTabManager {
+            constructor() {
+                this.elements = {
+                    body: document.body,
+                    searchModeBtn: document.getElementById('searchModeBtn'),
+                    askModeBtn: document.getElementById('askModeBtn'),
+                    mainForm: document.getElementById('mainForm'),
+                    mainInput: document.getElementById('mainInput'),
+                    chatHistory: document.getElementById('chatHistory'),
+                    chatInputForm: document.getElementById('chatInputForm'),
+                    chatInput: document.getElementById('chatInput'),
+                    tabSuggestions: document.getElementById('tabSuggestions'),
+                    contextPillsContainer: document.getElementById('contextPillsContainer'),
+                };
+
+                this.mode = 'search'; // 'search' or 'ask'
+                this.session = [];
+                this.marked = window.marked;
+                this.availableTabs = [];
+                this.referencedTabs = new Set();
+
+                this.setupEventListeners();
+                this.updateInputPlaceholder();
+                this.setupStreamedChatResponse();
+            }
+
+            setupEventListeners() {
+                this.elements.searchModeBtn.addEventListener('click', () => this.setMode('search'));
+                this.elements.askModeBtn.addEventListener('click', () => this.setMode('ask'));
+
+                this.elements.mainForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleMainSubmit();
+                });
+
+                this.elements.mainInput.addEventListener('input', () => this.handleMainInput());
+                this.elements.tabSuggestions.addEventListener('click', (e) => this.handleSuggestionClick(e));
+
+                this.elements.chatInputForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleChatSend();
+                });
+
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab' && document.activeElement === this.elements.mainInput) {
+                        e.preventDefault();
+                        this.setMode(this.mode === 'search' ? 'ask' : 'search');
+                    }
+                });
+
+                window.addEventListener('message', (e) => {
+                    if (e.data?.type === 'tabs-response') {
+                        this.availableTabs = e.data.tabs;
+                        const query = this.elements.mainInput.value.substring(this.elements.mainInput.value.lastIndexOf('@') + 1);
+                        this.showTabSuggestions(query);
+                    }
+                });
+            }
+
+            setupStreamedChatResponse() {
+                window.addEventListener('message', (e) => {
+                    if (e.data?.type !== 'chat-stream-response') return;
+                    
+                    const data = e.data;
+                    const assistantMessage = this.session[this.session.length - 1];
+                    const assistantMessageIndex = this.session.length - 1;
+
+                    if (data.token) {
+                        assistantMessage.content += data.token;
+                        const msgContainer = document.getElementById(`asst-msg-${assistantMessageIndex}`);
+                        if (msgContainer) {
+                            const contentEl = msgContainer.querySelector('.chat-content');
+                            // Update with raw text during stream for performance, then parse once at the end.
+                            contentEl.textContent = assistantMessage.content;
+                            this.elements.chatHistory.scrollTop = this.elements.chatHistory.scrollHeight;
+                        }
+                    } else if (data.done) {
+                        const msgContainer = document.getElementById(`asst-msg-${assistantMessageIndex}`);
+                        if (msgContainer) {
+                            const contentEl = msgContainer.querySelector('.chat-content');
+                            contentEl.innerHTML = this.marked.parse(assistantMessage.content);
+                        }
+                    } else if (data.error) {
+                        assistantMessage.content = `Error: ${data.error}`;
+                        this.renderChatHistory();
+                    }
+                });
+            }
+
+            setMode(newMode) {
+                if (this.mode === newMode) return;
+                this.mode = newMode;
+                this.elements.searchModeBtn.classList.toggle('active', newMode === 'search');
+                this.elements.askModeBtn.classList.toggle('active', newMode === 'ask');
+                this.updateInputPlaceholder();
+                this.elements.mainInput.focus();
+            }
+
+            updateInputPlaceholder() {
+                this.elements.mainInput.placeholder = this.mode === 'search' 
+                    ? 'Search anything...' 
+                    : 'Ask AI anything...';
+            }
+
+            handleMainSubmit() {
+                const value = this.elements.mainInput.value.trim();
+                if (!value) return;
+
+                if (this.mode === 'search') {
+                    this.navigate(value);
+                } else {
+                    this.startChat(value);
+                }
+            }
+
+            handleMainInput() {
+                const value = this.elements.mainInput.value;
+                const atIndex = value.lastIndexOf('@');
+
+                if (this.mode === 'ask' && atIndex > -1 && (atIndex === 0 || /\s/.test(value[atIndex - 1]))) {
+                    window.parent.postMessage({ type: 'request-tabs' }, '*');
+                } else {
+                    this.hideTabSuggestions();
+                }
+            }
+
+            showTabSuggestions(query) {
+                const filteredTabs = this.availableTabs.filter(tab =>
+                    !this.referencedTabs.has(tab.id) &&
+                    (tab.title.toLowerCase().includes(query.toLowerCase()) ||
+                     tab.url.toLowerCase().includes(query.toLowerCase()))
+                );
+
+                if (filteredTabs.length > 0) {
+                    this.elements.tabSuggestions.innerHTML = filteredTabs.map(tab => `
+                        <div class="suggestion-item" data-tab-id="${tab.id}">
+                            <div class="suggestion-title">${this.escapeHtml(tab.title)}</div>
+                            <div class="suggestion-url">${this.escapeHtml(tab.url)}</div>
+                        </div>
+                    `).join('');
+                    this.elements.tabSuggestions.style.display = 'block';
+                } else {
+                    this.hideTabSuggestions();
+                }
+            }
+
+            hideTabSuggestions() {
+                this.elements.tabSuggestions.style.display = 'none';
+            }
+
+            handleSuggestionClick(e) {
+                const item = e.target.closest('.suggestion-item');
+                if (!item) return;
+
+                const tabId = item.getAttribute('data-tab-id');
+                this.referencedTabs.add(tabId);
+                this.renderContextPills();
+
+                const atIndex = this.elements.mainInput.value.lastIndexOf('@');
+                this.elements.mainInput.value = this.elements.mainInput.value.substring(0, atIndex);
+                this.hideTabSuggestions();
+                this.elements.mainInput.focus();
+            }
+
+            renderContextPills() {
+                this.elements.contextPillsContainer.innerHTML = '';
+                for (const tabId of this.referencedTabs) {
+                    const tab = this.availableTabs.find(t => t.id === tabId);
+                    if (tab) {
+                        const pill = document.createElement('div');
+                        pill.className = 'context-pill';
+                        pill.innerHTML = `
+                            <span class="context-pill-title" title="${this.escapeHtml(tab.title)}">${this.escapeHtml(tab.title)}</span>
+                            <button class="context-pill-remove" data-tab-id="${tab.id}">&times;</button>
+                        `;
+                        pill.querySelector('.context-pill-remove').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.referencedTabs.delete(tab.id);
+                            this.renderContextPills();
+                        });
+                        this.elements.contextPillsContainer.appendChild(pill);
+                    }
+                }
+            }
+
+            navigate(value) {
+                let target = value;
+                if (!/^https?:\/\//i.test(value)) {
+                    if (value.includes('.') && !value.includes(' ')) {
+                        target = 'https://' + value;
+                    } else {
+                        target = 'https://start.duckduckgo.com/?q=' + encodeURIComponent(value);
+                    }
+                }
+                window.location.href = target;
+            }
+
+            startChat(initialMessage) {
+                this.elements.body.classList.add('chat-active');
+                this.elements.chatInput.focus();
+                this.handleChatSend(initialMessage);
+            }
+
+            async handleChatSend(messageOverride) {
+                const message = messageOverride || this.elements.chatInput.value.trim();
+                if (!message) return;
+
+                if (!messageOverride) {
+                    this.elements.chatInput.value = '';
+                }
+
+                this.session.push({ role: 'user', content: message });
+                this.renderChatHistory();
+
+                const assistantMessage = { role: 'assistant', content: '' };
+                this.session.push(assistantMessage);
+                const assistantMessageIndex = this.session.length - 1;
+
+                this.renderChatHistory();
+
+                const reqId = Date.now().toString();
+                const referencedTabIds = Array.from(this.referencedTabs);
+
+                // Delegate chat sending to the parent BrowserManager
+                window.parent.postMessage({
+                    type: 'new-tab-chat-send',
+                    reqId: reqId,
+                    session: this.session.slice(0, -1),
+                    referencedTabIds: referencedTabIds,
+                }, '*');
+
+                // The rest of the logic will be moved to a message listener
+                // that receives forwarded stream chunks from the parent.
+            }
+
+            renderChatHistory() {
+                this.elements.chatHistory.innerHTML = '';
+                this.session.forEach((msg, index) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = `chat-msg ${msg.role === 'user' ? 'user-msg' : 'assistant-msg'}`;
+                    if (msg.role === 'assistant') {
+                        wrapper.id = `asst-msg-${index}`;
+                    }
+                    
+                    const label = document.createElement('div');
+                    label.className = 'chat-label';
+                    label.textContent = msg.role === 'user' ? 'You' : 'AI';
+                    
+                    const content = document.createElement('div');
+                    content.className = 'chat-content';
+                    content.innerHTML = this.marked.parse(msg.content || ' ');
+                    
+                    wrapper.appendChild(label);
+                    wrapper.appendChild(content);
+                    this.elements.chatHistory.appendChild(wrapper);
+                });
+                this.elements.chatHistory.scrollTop = this.elements.chatHistory.scrollHeight;
+            }
+
+            escapeHtml(str) {
+                return str.replace(/[&<>"']/g, (match) => {
+                    return {
+                        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                    }[match];
+                });
+            }
+
+        }
+
+        new NewTabManager();
+    </script>
+</body>
+</html> 

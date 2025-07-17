@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Browser - Modern web browser with intelligent features">
+    <title>AI Browser</title>
+    <link rel="stylesheet" href="index.css">
+    <!-- Markdown parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="browser-container" role="application" aria-label="AI Browser">
+        <!-- Tab Bar -->
+        <div class="tab-bar" role="tablist" aria-label="Browser tabs">
+            <div class="tabs-container" id="tabsContainer">
+                <!-- Tabs will be dynamically added here -->
+            </div>
+            <button class="new-tab-btn" id="newTabBtn" title="New Tab (⌘T)" aria-label="Open new tab">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 4v16M20 12H4" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Navigation Bar -->
+        <nav class="nav-bar" role="navigation" aria-label="Browser navigation">
+            <div class="nav-controls" role="group" aria-label="Navigation controls">
+                <button class="nav-btn" id="backBtn" title="Go back (⌘←)" aria-label="Navigate back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5" />
+                        <path d="M12 5l-7 7 7 7" />
+                    </svg>
+                </button>
+                <button class="nav-btn" id="forwardBtn" title="Go forward (⌘→)" aria-label="Navigate forward">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14" />
+                        <path d="M12 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <button class="nav-btn" id="refreshBtn" title="Refresh page (⌘R)" aria-label="Refresh current page">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10" />
+                        <polyline points="1 20 1 14 7 14" />
+                        <path d="M3.51 9a9 9 0 0114.13-3.36L23 10" />
+                        <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14" />
+                    </svg>
+                </button>
+            </div>
+            <div class="url-bar-container">
+                <div class="url-input-wrapper">
+                    <input type="url" 
+                           class="url-bar" 
+                           id="urlBar" 
+                           placeholder="Search or enter website URL..."
+                           aria-label="Address bar"
+                           autocomplete="url"
+                           spellcheck="false">
+                    <div class="url-suggestions" id="urlSuggestions" role="listbox" aria-label="URL suggestions"></div>
+                </div>
+                <button class="go-btn" id="goBtn" title="Navigate to URL" aria-label="Go to entered URL">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="6" y1="12" x2="18" y2="12" />
+                        <polyline points="13 7 18 12 13 17" />
+                    </svg>
+                </button>
+                <button class="chat-btn" id="chatBtn" title="AI Chat (⌘I)" aria-label="Open AI Chat">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
+                </button>
+            </div>
+        </nav>
+
+        <!-- AI Chat Sidebar -->
+        <aside class="chat-sidebar" id="chatSidebar" role="complementary" aria-label="AI Chat Sidebar">
+            <div class="chat-history" id="chatHistory" tabindex="0" aria-live="polite" aria-atomic="false"></div>
+            <div class="chat-input-area">
+                <div id="contextPillsContainer" class="context-pills-container"></div>
+                <form class="chat-input-container" id="chatInputForm" autocomplete="off">
+                    <button type="button" class="chat-clear-btn" id="chatClearBtn" aria-label="Clear chat" title="Clear chat">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18" />
+                            <path d="M8 6v12a2 2 0 002 2h4a2 2 0 002-2V6" />
+                            <line x1="10" y1="11" x2="14" y2="11" />
+                            <line x1="10" y1="15" x2="14" y2="15" />
+                        </svg>
+                    </button>
+                    <div class="chat-input-wrapper">
+                        <input id="chatInput" class="chat-input" type="text" placeholder="Ask AI..." aria-label="Chat input" />
+                        <div id="tabSuggestions" class="tab-suggestions"></div>
+                    </div>
+                    <button type="submit" class="chat-send-btn" id="chatSendBtn" aria-label="Send message">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13" />
+                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Web Content Area -->
+        <main class="content-area" id="contentArea" role="main" aria-label="Web content">
+            <!-- Loading state -->
+            <div class="loading-state" id="loadingState" style="display: none;">
+                <div class="loading-indicator">
+                    <div class="loading-spinner" aria-hidden="true"></div>
+                    <span>Loading page...</span>
+                </div>
+            </div>
+            
+            <!-- Error state -->
+            <div class="error-state" id="errorState" style="display: none;">
+                <div class="error-page">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="var(--color-text-tertiary)" aria-hidden="true">
+                        <path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h2>Unable to load page</h2>
+                    <p>Please check your internet connection and try again.</p>
+                    <button class="retry-btn" id="retryBtn">Try Again</button>
+                </div>
+            </div>
+            
+            <!-- Web views will be dynamically added here -->
+        </main>
+    </div>
+
+    <script>
+        class BrowserManager {
+            constructor() {
+                this.tabs = [];
+                this.activeTabId = null;
+                this.tabCounter = 0;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.createInitialTab();
+                this.setupKeyboardShortcuts();
+                this.chatSessions = new Map();
+                this.marked = window.marked;
+            }
+
+            initializeElements() {
+                this.tabsContainer = document.getElementById('tabsContainer');
+                this.newTabBtn = document.getElementById('newTabBtn');
+                this.backBtn = document.getElementById('backBtn');
+                this.forwardBtn = document.getElementById('forwardBtn');
+                this.refreshBtn = document.getElementById('refreshBtn');
+                this.urlBar = document.getElementById('urlBar');
+                this.goBtn = document.getElementById('goBtn');
+                this.contentArea = document.getElementById('contentArea');
+                this.loadingState = document.getElementById('loadingState');
+                this.errorState = document.getElementById('errorState');
+                this.retryBtn = document.getElementById('retryBtn');
+                // References for showing/hiding the URL bar portion on the new-tab page
+                this.navBar = document.querySelector('.nav-bar');
+                this.urlBarContainer = document.querySelector('.url-bar-container');
+                this.chatBtn = document.getElementById('chatBtn');
+                this.chatSidebar = document.getElementById('chatSidebar');
+                this.chatInput = document.getElementById('chatInput');
+                this.chatInputForm = document.getElementById('chatInputForm');
+                this.chatHistory = document.getElementById('chatHistory');
+                this.chatClearBtn = document.getElementById('chatClearBtn');
+                this.contextPillsContainer = document.getElementById('contextPillsContainer');
+                this.tabSuggestions = document.getElementById('tabSuggestions');
+
+                // Listen for messages from webviews
+                window.addEventListener('message', (e) => {
+                    if (!e.data || !e.data.type) return;
+
+                    // Handle shortcut messages from newtab.html
+                    if (e.data.type === 'shortcut') {
+                        switch (e.data.command) {
+                            case 'close-tab':
+                                this.closeActiveTab();
+                                break;
+                            case 'new-tab':
+                                this.createTab();
+                                break;
+                            case 'focus-url':
+                                if (this.urlBarContainer.style.display !== 'none') {
+                                    this.urlBar.focus();
+                                }
+                                break;
+                        }
+                    }
+
+                    // Handle tab context requests from newtab.html
+                    if (e.data.type === 'request-tabs') {
+                        const sourceWebview = this.tabs.find(tab => tab.webview.contentWindow === e.source);
+                        if (sourceWebview) {
+                            const tabData = this.tabs
+                                .filter(t => t.id !== sourceWebview.id && !t.url.includes('newtab.html'))
+                                .map(t => ({ id: t.id, title: t.title, url: t.url }));
+                            
+                            // Use the webview's postMessage API to communicate with the guest page
+                            sourceWebview.webview.postMessage({ type: 'tabs-response', tabs: tabData }, '*');
+                        }
+                    }
+
+                    // Handle chat requests from newtab.html
+                    if (e.data.type === 'new-tab-chat-send') {
+                        const sourceWebview = this.tabs.find(tab => tab.webview.contentWindow === e.source);
+                        if (sourceWebview) {
+                            this.handleNewTabChat(e.data, sourceWebview);
+                        }
+                    }
+                });
+            }
+
+            async handleNewTabChat(data, sourceTab) {
+                const { reqId, session, referencedTabIds } = data;
+                const contexts = [];
+
+                for (const tabId of referencedTabIds) {
+                    const referencedTab = this.tabs.find(t => t.id === tabId);
+                    if (referencedTab) {
+                        try {
+                            const context = await this.getPageContext(referencedTab);
+                            if (context) {
+                                contexts.push(context);
+                            }
+                        } catch (err) {
+                            console.error(`Failed to get page context for tab ${tabId}:`, err);
+                        }
+                    }
+                }
+
+                window.electronAPI.sendChat(reqId, session, contexts);
+
+                const streamHandler = (streamData) => {
+                    // Only handle responses for this request and forward to the source webview
+                    if (streamData.id === reqId) {
+                        // Forward streamed chat data to the webview using the webview's postMessage API
+                        sourceTab.webview.postMessage({ type: 'chat-stream-response', ...streamData }, '*');
+                        if (streamData.done || streamData.error) {
+                            // Clean up listener after completion or error
+                            window.electronAPI.removeListener('chat-stream', streamHandler);
+                        }
+                    }
+                };
+
+                // Ensure we don't have duplicate listeners
+                window.electronAPI.onChatStream(streamHandler);
+            }
+
+            setupEventListeners() {
+                // Tab management
+                this.newTabBtn.addEventListener('click', () => this.createTab());
+                
+                // Navigation
+                this.backBtn.addEventListener('click', () => this.navigateBack());
+                this.forwardBtn.addEventListener('click', () => this.navigateForward());
+                this.refreshBtn.addEventListener('click', () => this.refreshPage());
+                this.goBtn.addEventListener('click', () => this.navigateToUrl());
+                this.retryBtn.addEventListener('click', () => this.refreshPage());
+                
+                // URL bar
+                this.urlBar.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.navigateToUrl();
+                    }
+                });
+
+                // URL bar text selection with improved UX
+                this.urlBar.addEventListener('focus', () => {
+                    this.urlBar.select();
+                });
+
+                // Enhanced click behavior
+                this.urlBar.addEventListener('click', (e) => {
+                    if (this.urlBar.selectionStart === this.urlBar.selectionEnd) {
+                        this.urlBar.select();
+                    }
+                });
+
+                // Chat button
+                if (this.chatBtn) {
+                    this.chatBtn.addEventListener('click', () => this.toggleChatSidebar());
+                }
+
+                // Chat form submission
+                if (this.chatInputForm) {
+                    this.chatInputForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        this.handleChatSend();
+                    });
+                }
+                if (this.chatClearBtn) {
+                    this.chatClearBtn.addEventListener('click', () => this.clearChat());
+                }
+
+                this.chatInput.addEventListener('input', () => this.handleChatInput());
+                this.chatInput.addEventListener('keydown', (e) => this.handleSuggestionKeyboardNav(e));
+                this.tabSuggestions.addEventListener('click', (e) => this.handleSuggestionClick(e));
+
+                // Electron menu shortcuts
+                window.electronAPI.onNewTab(() => this.createTab());
+                window.electronAPI.onCloseTab(() => this.closeActiveTab());
+                window.electronAPI.onNavigateBack(() => this.navigateBack());
+                window.electronAPI.onNavigateForward(() => this.navigateForward());
+                window.electronAPI.onRefreshPage(() => this.refreshPage());
+
+                // Window resize handling
+                window.addEventListener('resize', this.debounce(() => {
+                    this.updateLayout();
+                }, 250));
+            }
+
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    // Handle keyboard shortcuts
+                    if (e.metaKey || e.ctrlKey) {
+                        switch (e.key) {
+                            case 't':
+                                e.preventDefault();
+                                this.createTab();
+                                break;
+                            case 'w':
+                                e.preventDefault();
+                                this.closeActiveTab();
+                                break;
+                            case 'r':
+                                e.preventDefault();
+                                this.refreshPage();
+                                break;
+                            case 'l':
+                                e.preventDefault();
+                                this.urlBar.focus();
+                                break;
+                        }
+                    }
+                });
+            }
+
+            debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+
+            updateLayout() {
+                // Handle any layout updates needed on resize
+                this.tabs.forEach(tab => {
+                    if (tab.webview) {
+                        // Webviews automatically handle resize
+                    }
+                });
+            }
+
+            // Show or hide the navigation bar depending on the active URL
+            updateNavBarVisibility(url) {
+                if (!this.urlBarContainer) return;
+                const isNewTabPage = url && url.includes('newtab.html');
+                this.urlBarContainer.style.display = isNewTabPage ? 'none' : 'flex';
+            }
+
+            async createTab(url = 'newtab.html') {
+                const preloadPath = await window.electronAPI.getPreloadPath();
+                console.log('createTab called with url:', url);
+                const tabId = `tab-${++this.tabCounter}`;
+                
+                // Create tab object
+                const tab = {
+                    id: tabId,
+                    url: url,
+                    title: 'New Tab',
+                    webview: null,
+                    isLoading: false,
+                    chatSidebarOpen: false, // Track chat sidebar state per tab
+                    referencedTabs: new Set(), // Store IDs of all context tabs
+                };
+
+                // Create enhanced tab UI with better accessibility
+                const tabElement = document.createElement('div');
+                tabElement.className = 'tab';
+                tabElement.setAttribute('data-tab-id', tabId);
+                tabElement.setAttribute('role', 'tab');
+                tabElement.setAttribute('aria-selected', 'false');
+                tabElement.setAttribute('tabindex', '-1');
+                
+                const tabTitle = document.createElement('span');
+                tabTitle.className = 'tab-title';
+                tabTitle.textContent = 'New Tab';
+                tabTitle.setAttribute('aria-label', 'Tab title');
+                
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'tab-close-btn';
+                closeBtn.setAttribute('aria-label', 'Close tab');
+                closeBtn.setAttribute('title', 'Close tab (⌘W)');
+                closeBtn.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                `;
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.closeTab(tabId);
+                });
+
+                tabElement.appendChild(tabTitle);
+                tabElement.appendChild(closeBtn);
+                
+                tabElement.addEventListener('click', () => this.switchToTab(tabId));
+                tabElement.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.switchToTab(tabId);
+                    }
+                });
+                
+                this.tabsContainer.appendChild(tabElement);
+
+                // Create webview with enhanced loading states
+                const webview = document.createElement('webview');
+                webview.style.display = 'none';
+                // Note: removed webview.src = url;
+                webview.setAttribute('allowpopups', '');
+                webview.setAttribute('webpreferences', 'contextIsolation=true');
+                webview.setAttribute('preload', `file://${preloadPath}`);
+                webview.setAttribute('useragent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 AI-Browser/1.0');
+                webview.setAttribute('partition', 'persist:browser');
+                const result = await window.electronAPI.navigateTo(url);
+                console.log('navigateTo result:', result);
+                if (result.success) {
+                  tab.url = result.url;
+                  webview.setAttribute('src', result.url); // Set src instead of loadURL
+                } else {
+                  console.error('Navigation failed:', result.error);
+                }
+
+                // Enhanced webview event handling
+                webview.addEventListener('dom-ready', () => {
+                    tab.title = webview.getTitle() || 'New Tab';
+                    tabTitle.textContent = tab.title;
+                    tabTitle.setAttribute('title', tab.title);
+                    if (this.activeTabId === tabId) {
+                        this.urlBar.value = webview.getURL();
+                        this.hideLoading();
+                        if (webview.getURL().includes('newtab.html')) {
+                            webview.focus();
+                            webview.executeJavaScript('document.getElementById("mainInput")?.focus()');
+                        }
+                    }
+                });
+
+                webview.addEventListener('page-title-updated', (e) => {
+                    tab.title = e.title;
+                    tabTitle.textContent = tab.title;
+                    tabTitle.setAttribute('title', tab.title);
+                });
+
+                webview.addEventListener('did-navigate', (e) => {
+                    tab.url = e.url;
+                    if (this.activeTabId === tabId) {
+                        this.urlBar.value = e.url;
+                        this.updateNavBarVisibility(e.url);
+                    }
+                });
+
+                webview.addEventListener('did-navigate-in-page', (e) => {
+                    tab.url = e.url;
+                    if (this.activeTabId === tabId) {
+                        this.urlBar.value = e.url;
+                        this.updateNavBarVisibility(e.url);
+                    }
+                });
+
+                webview.addEventListener('did-fail-load', (e) => {
+                    console.error('Page failed to load:', e);
+                    if (e.errorCode !== -3 && this.activeTabId === tabId) { 
+                        this.showError();
+                    }
+                    tab.isLoading = false;
+                });
+
+                webview.addEventListener('did-start-loading', () => {
+                    tab.isLoading = true;
+                    tabTitle.textContent = 'Loading...';
+                    if (this.activeTabId === tabId) {
+                        this.showLoading();
+                    }
+                });
+
+                webview.addEventListener('did-stop-loading', () => {
+                    tab.isLoading = false;
+                    if (this.activeTabId === tabId) {
+                        this.hideLoading();
+                    }
+                });
+
+                this.contentArea.appendChild(webview);
+                tab.webview = webview;
+                tab.tabElement = tabElement;
+                tab.tabTitle = tabTitle;
+
+                this.tabs.push(tab);
+                // Initialize empty chat session for this tab
+                if (!this.chatSessions.has(tabId)) {
+                    this.chatSessions.set(tabId, []);
+                }
+                this.switchToTab(tabId);
+
+                return tab;
+            }
+
+            showLoading() {
+                this.loadingState.style.display = 'flex';
+                this.errorState.style.display = 'none';
+            }
+
+            hideLoading() {
+                this.loadingState.style.display = 'none';
+            }
+
+            showError() {
+                this.loadingState.style.display = 'none';
+                this.errorState.style.display = 'flex';
+            }
+
+            createInitialTab() {
+                console.log('createInitialTab called');
+                this.createTab('newtab.html');
+            }
+
+            switchToTab(tabId) {
+                // Hide all webviews and deactivate tabs
+                this.tabs.forEach(tab => {
+                    tab.webview.style.display = 'none';
+                    tab.tabElement.classList.remove('active');
+                    tab.tabElement.setAttribute('aria-selected', 'false');
+                });
+
+                // Show selected webview and activate tab
+                const tab = this.tabs.find(t => t.id === tabId);
+                if (tab) {
+                    tab.webview.style.display = 'flex';
+                    tab.tabElement.classList.add('active');
+                    tab.tabElement.setAttribute('aria-selected', 'true');
+                    this.activeTabId = tabId;
+                    this.urlBar.value = tab.url;
+                    this.updateNavBarVisibility(tab.url);
+
+                    if (tab.url && tab.url.includes('newtab.html')) {
+                        this.hideChatSidebar(true); // Hide and clear for newtab
+                        if (tab.webview) {
+                            tab.webview.focus();
+                            tab.webview.executeJavaScript('document.getElementById("searchInput")?.focus()');
+                        }
+                    } else {
+                        if (tab.chatSidebarOpen) {
+                            this.showChatSidebar();
+                        } else {
+                            this.hideChatSidebar();
+                        }
+                    }
+                    
+                    this.updateChatContextUI(tab);
+                    // Focus management
+                    if (this.urlBarContainer.style.display !== 'none') {
+                        this.urlBar.focus();
+                    } else if (tab.webview) {
+                        tab.webview.focus();
+                    }
+                    
+                    // Guarantee the new-tab search box is focused and selected so shortcuts work without extra clicks
+                    if (tab.url && tab.url.includes('newtab.html') && tab.webview) {
+                        tab.webview.executeJavaScript('const i=document.getElementById("mainInput"); if(i){ i.focus(); i.select(); }');
+                    }
+                }
+            }
+
+            closeTab(tabId) {
+                const tabIndex = this.tabs.findIndex(t => t.id === tabId);
+                if (tabIndex === -1) return;
+
+                const tab = this.tabs[tabIndex];
+                
+                // Remove from DOM
+                tab.tabElement.remove();
+                tab.webview.remove();
+                
+                // Remove from tabs array
+                this.tabs.splice(tabIndex, 1);
+
+                // If this was the active tab, switch to another
+                if (this.activeTabId === tabId) {
+                    if (this.tabs.length > 0) {
+                        const newActiveTab = this.tabs[Math.max(0, tabIndex - 1)];
+                        this.switchToTab(newActiveTab.id);
+                    } else {
+                        // No tabs left, create a new one
+                        this.createTab();
+                    }
+                }
+            }
+
+            closeActiveTab() {
+                if (this.activeTabId) {
+                    this.closeTab(this.activeTabId);
+                }
+            }
+
+            async navigateToUrl() {
+                const url = this.urlBar.value.trim();
+                if (!url) return;
+
+                const result = await window.electronAPI.navigateTo(url);
+                if (result.success && this.activeTabId) {
+                    const tab = this.tabs.find(t => t.id === this.activeTabId);
+                    if (tab) {
+                        tab.webview.loadURL(result.url);
+                        tab.url = result.url;
+                    }
+                }
+            }
+
+            navigateBack() {
+                if (this.activeTabId) {
+                    const tab = this.tabs.find(t => t.id === this.activeTabId);
+                    if (tab && tab.webview.canGoBack()) {
+                        tab.webview.goBack();
+                    }
+                }
+            }
+
+            navigateForward() {
+                if (this.activeTabId) {
+                    const tab = this.tabs.find(t => t.id === this.activeTabId);
+                    if (tab && tab.webview.canGoForward()) {
+                        tab.webview.goForward();
+                    }
+                }
+            }
+
+            refreshPage() {
+                if (this.activeTabId) {
+                    const tab = this.tabs.find(t => t.id === this.activeTabId);
+                    if (tab) {
+                        tab.webview.reload();
+                    }
+                }
+            }
+
+            async handleChatSend() {
+                if (!this.chatInput) return;
+                const message = this.chatInput.value.trim();
+                if (!message) return;
+                this.chatInput.value = '';
+            
+                const tabId = this.activeTabId;
+                const session = this.chatSessions.get(tabId) || [];
+            
+                // Add user message to session and UI
+                session.push({ role: 'user', content: message });
+                this.renderChatHistory(); // Re-render to show user message
+            
+                // Get context from all referenced tabs
+                const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+                const contexts = [];
+                
+                if (activeTab) {
+                    for (const tabId of activeTab.referencedTabs) {
+                        const referencedTab = this.tabs.find(t => t.id === tabId);
+                        if (referencedTab) {
+                            try {
+                                const context = await this.getPageContext(referencedTab);
+                                if (context) contexts.push(context);
+                            } catch (err) {
+                                console.error(`Failed to get page context for referenced tab ${tabId}:`, err);
+                            }
+                        }
+                    }
+                }
+
+                // Add placeholder for assistant message to session
+                const assistantMessage = { role: 'assistant', content: '' };
+                session.push(assistantMessage);
+                const assistantMessageIndex = session.length - 1;
+            
+                // Re-render to show assistant placeholder
+                this.renderChatHistory();
+                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+            
+                // Generate unique request ID and send to main process
+                const reqId = Date.now().toString();
+                window.electronAPI.sendChat(reqId, session.slice(0, -1), contexts); // Send all contexts
+            
+                const streamHandler = (data) => {
+                    if (data.id !== reqId) return;
+            
+                    if (data.token) {
+                        // Always update the session state in the background
+                        assistantMessage.content += data.token;
+            
+                        // Only update the DOM if the message's tab is active
+                        if (this.activeTabId === tabId) {
+                            const msgContainer = document.getElementById(`asst-msg-${tabId}-${assistantMessageIndex}`);
+                            if (msgContainer) {
+                                const contentEl = msgContainer.querySelector('.chat-content');
+                                // Update with raw text during stream for performance
+                                contentEl.textContent = assistantMessage.content;
+                                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+                            }
+                        }
+                    } else if (data.done) {
+                        // Final state is already in assistantMessage.content
+                        // Re-render one last time with markdown if the tab is active
+                        if (this.activeTabId === tabId) {
+                            const msgContainer = document.getElementById(`asst-msg-${tabId}-${assistantMessageIndex}`);
+                            if (msgContainer) {
+                                const contentEl = msgContainer.querySelector('.chat-content');
+                                contentEl.innerHTML = this.marked.parse(assistantMessage.content);
+                            }
+                        }
+                        window.electronAPI.removeListener('chat-stream', streamHandler);
+                    } else if (data.error) {
+                        assistantMessage.content = `Error: ${data.error}`;
+                        if (this.activeTabId === tabId) {
+                            this.renderChatHistory(); // Re-render to show the error
+                        }
+                        window.electronAPI.removeListener('chat-stream', streamHandler);
+                    }
+                };
+            
+                window.electronAPI.onChatStream(streamHandler);
+            }
+
+            async getPageContext(tab) {
+                if (!tab || !tab.webview || tab.isLoading || tab.webview.isCrashed()) {
+                    return null;
+                }
+                const webview = tab.webview;
+
+                const pageUrl = webview.getURL();
+                if (!pageUrl.startsWith('http')) {
+                    return null;
+                }
+                const pageTitle = webview.getTitle();
+                try {
+                    const pageContent = await webview.executeJavaScript('document.body.innerText');
+                    return {
+                        title: pageTitle,
+                        url: pageUrl,
+                        content: pageContent.substring(0, 4000) // Truncate for performance
+                    };
+                } catch (e) {
+                    console.error(`Could not get page content from ${pageUrl}: `, e);
+                    return null;
+                }
+            }
+
+            toggleChatSidebar() {
+                if (!this.chatSidebar) return;
+                // Prevent opening on new-tab pages
+                const currentTab = this.tabs.find(t => t.id === this.activeTabId);
+                if (currentTab && currentTab.url && currentTab.url.includes('newtab.html')) {
+                    return;
+                }
+                const isOpen = this.chatSidebar.classList.toggle('open');
+                if (currentTab) {
+                    currentTab.chatSidebarOpen = isOpen;
+                }
+
+                if (isOpen) {
+                    this.showChatSidebar();
+                } else {
+                    this.hideChatSidebar();
+                }
+            }
+
+            showChatSidebar() {
+                if (!this.chatSidebar) return;
+                const currentTab = this.tabs.find(t => t.id === this.activeTabId);
+                if (!currentTab) return;
+
+                // Auto-add current page as context if it's not a newtab and not already added
+                if (!currentTab.url.includes('newtab.html') && !currentTab.referencedTabs.has(currentTab.id)) {
+                    currentTab.referencedTabs.add(currentTab.id);
+                }
+                
+                this.chatSidebar.classList.add('open');
+                this.contentArea.style.width = `calc(100% - 320px)`;
+                this.chatInput.focus();
+                this.renderChatHistory();
+                this.updateChatContextUI(currentTab);
+                currentTab.chatSidebarOpen = true;
+            }
+
+            hideChatSidebar(clearHistory = false) {
+                if (!this.chatSidebar) return;
+                this.chatSidebar.classList.remove('open');
+                this.contentArea.style.width = '';
+
+                const currentTab = this.tabs.find(t => t.id === this.activeTabId);
+                if (currentTab) {
+                    currentTab.chatSidebarOpen = false;
+                }
+                if (clearHistory) {
+                    this.chatHistory.innerHTML = '';
+                }
+            }
+
+            updateChatContextUI(tab) {
+                this.renderContextPills();
+                const hasContext = tab && tab.referencedTabs.size > 0;
+                this.chatInput.placeholder = hasContext ? 'Ask a question about the page(s)...' : 'Ask AI...';
+            }
+
+            dismissPageContext() {
+                // This function is no longer needed as individual pills are dismissed.
+            }
+
+            renderChatHistory() {
+                if (!this.chatHistory) return;
+                this.chatHistory.innerHTML = '';
+                const messages = this.chatSessions.get(this.activeTabId) || [];
+                messages.forEach((msg, index) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = `chat-msg ${msg.role === 'user' ? 'user-msg' : 'assistant-msg'}`;
+                    // Add a unique ID to the assistant message wrapper for easy targeting
+                    if (msg.role === 'assistant') {
+                        wrapper.id = `asst-msg-${this.activeTabId}-${index}`;
+                    }
+                    const label = document.createElement('div');
+                    label.className = 'chat-label';
+                    label.textContent = msg.role === 'user' ? 'You' : 'AI';
+                    const content = document.createElement('div');
+                    content.className = 'chat-content';
+                    if (msg.role === 'assistant') {
+                        content.innerHTML = this.marked.parse(msg.content);
+                    } else {
+                        content.textContent = msg.content;
+                    }
+                    wrapper.appendChild(label);
+                    wrapper.appendChild(content);
+                    this.chatHistory.appendChild(wrapper);
+                });
+                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+            }
+
+            clearChat() {
+                this.chatSessions.set(this.activeTabId, []);
+                if (this.chatHistory) {
+                    this.chatHistory.innerHTML = '';
+                }
+                // Also reset the context dismissal state
+                const tab = this.tabs.find(t => t.id === this.activeTabId);
+                if (tab) {
+                    tab.referencedTabs.clear();
+                    // Re-add current tab if it's a valid context page
+                    if (!tab.url.includes('newtab.html')) {
+                        tab.referencedTabs.add(tab.id);
+                    }
+                    this.updateChatContextUI(tab);
+                }
+            }
+
+            handleChatInput() {
+                const value = this.chatInput.value;
+                const atIndex = value.lastIndexOf('@');
+
+                if (atIndex > -1 && (atIndex === 0 || /\s/.test(value[atIndex - 1]))) {
+                    const query = value.substring(atIndex + 1);
+                    this.showTabSuggestions(query);
+                } else {
+                    this.hideTabSuggestions();
+                }
+            }
+
+            handleSuggestionClick(e) {
+                const item = e.target.closest('.suggestion-item');
+                if (!item) return;
+
+                const tabId = item.getAttribute('data-tab-id');
+                const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+
+                if (tabId && activeTab) {
+                    activeTab.referencedTabs.add(tabId);
+                    this.updateChatContextUI(activeTab);
+
+                    const atIndex = this.chatInput.value.lastIndexOf('@');
+                    this.chatInput.value = this.chatInput.value.substring(0, atIndex);
+                    this.hideTabSuggestions();
+                    this.chatInput.focus();
+                }
+            }
+
+            showTabSuggestions(query) {
+                const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+                const filteredTabs = this.tabs.filter(tab =>
+                    !activeTab.referencedTabs.has(tab.id) &&
+                    (tab.title.toLowerCase().includes(query.toLowerCase()) ||
+                     tab.url.toLowerCase().includes(query.toLowerCase()))
+                );
+
+                if (filteredTabs.length > 0) {
+                    this.tabSuggestions.innerHTML = filteredTabs.map(tab => `
+                        <div class="suggestion-item" data-tab-id="${tab.id}">
+                            <div class="suggestion-title">${this.escapeHtml(tab.title)}</div>
+                            <div class="suggestion-url">${this.escapeHtml(tab.url)}</div>
+                        </div>
+                    `).join('');
+                    this.tabSuggestions.style.display = 'block';
+                } else {
+                    this.hideTabSuggestions();
+                }
+            }
+
+            hideTabSuggestions() {
+                this.tabSuggestions.style.display = 'none';
+                this.tabSuggestions.innerHTML = '';
+            }
+
+            escapeHtml(str) {
+                return str.replace(/[&<>"']/g, (match) => {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    }[match];
+                });
+            }
+
+            handleSuggestionKeyboardNav(e) {
+                // Future implementation for arrow key navigation
+            }
+
+            renderContextPills() {
+                this.contextPillsContainer.innerHTML = '';
+                const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+                if (!activeTab) return;
+
+                for (const tabId of activeTab.referencedTabs) {
+                    const tab = this.tabs.find(t => t.id === tabId);
+                    if (tab) {
+                        const pill = document.createElement('div');
+                        pill.className = 'context-pill';
+                        pill.innerHTML = `
+                            <span class="context-pill-title" title="${this.escapeHtml(tab.title)}">${this.escapeHtml(tab.title)}</span>
+                            <button class="context-pill-remove" data-tab-id="${tab.id}">&times;</button>
+                        `;
+                        this.contextPillsContainer.appendChild(pill);
+                    }
+                }
+
+                // Add event listeners to remove buttons
+                this.contextPillsContainer.querySelectorAll('.context-pill-remove').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const tabIdToRemove = e.currentTarget.getAttribute('data-tab-id');
+                        activeTab.referencedTabs.delete(tabIdToRemove);
+                        this.updateChatContextUI(activeTab);
+                    });
+                });
+            }
+        }
+
+        // Initialize the browser when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new BrowserManager();
+        });
+    </script>
+</body>
+</html>
