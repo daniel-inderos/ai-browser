@@ -257,6 +257,13 @@ textarea:focus {
     font-weight: var(--font-weight-semibold);
 }
 
+.tab-favicon {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--spacing-2);
+    flex-shrink: 0;
+}
+
 .tab-close-btn {
     display: flex;
     align-items: center;

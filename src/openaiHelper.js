@@ -1,32 +1,16 @@
-const OpenAI = require('openai');
-
-let client;
-function getClient() {
-  if (!client) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('Missing OPENAI_API_KEY');
-    }
-    client = new OpenAI({ apiKey });
-  }
-  return client;
-}
+const { OpenAI } = require('openai');
 
 async function* streamChat(messages) {
-  const openai = getClient();
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    stream: true,
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const stream = await openai.chat.completions.create({
+    model: 'gpt-4.1',
     messages,
+    stream: true,
   });
-  for await (const chunk of completion) {
-    const token = chunk.choices?.[0]?.delta?.content;
-    if (token) {
-      yield token;
-    }
+  for await (const chunk of stream) {
+    const token = chunk.choices[0]?.delta?.content || '';
+    if (token) yield token;
   }
 }
 
-module.exports = {
-  streamChat,
-}; 
+module.exports = { streamChat };

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>New Tab</title>
+    <!-- Markdown parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
@@ -14,6 +15,17 @@
             --input-focus-border: #333;
             --btn-active-color: #000;
             --btn-inactive-color: #888;
+            --surface-elevated: #f2f2f2;
+            --surface-hover: #e6e6e6;
+            --surface-active: #d9d9d9;
+            --text-tertiary: #777777;
+            --radius-md: 0.5rem;
+            --radius-full: 9999px;
+            --spacing-1: 0.25rem;
+            --spacing-2: 0.5rem;
+            --spacing-3: 0.75rem;
+            --spacing-4: 1rem;
+            --spacing-5: 1.25rem;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -25,6 +37,10 @@
                 --input-focus-border: #fff;
                 --btn-active-color: #fff;
                 --btn-inactive-color: #888;
+                --surface-elevated: #1a1a1a;
+                --surface-hover: #333333;
+                --surface-active: #4d4d4d;
+                --text-tertiary: #a0a0a0;
             }
         }
 
@@ -36,50 +52,22 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: var(--bg-color);
             color: var(--text-color);
+            font-size: 14px;
         }
 
-        /* --- Main containers --- */
-        .prompt-container, .chat-container {
+        .container {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             width: 100%;
             height: 100%;
             display: flex;
-            transition: opacity .3s ease, transform .3s ease;
-        }
-
-        .prompt-container {
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            opacity: 1;
-            transform: translateY(0);
-            z-index: 2;
+            padding: 1rem;
         }
 
-        .chat-container {
-            flex-direction: column;
-            opacity: 0;
-            transform: translateY(20px);
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        body.chat-active .prompt-container {
-            opacity: 0;
-            transform: translateY(-20px);
-            pointer-events: none;
-        }
-
-        body.chat-active .chat-container {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-
-        /* --- Prompt View --- */
-        .prompt-wrapper {
+        .main-wrapper {
             width: 100%;
             max-width: 600px;
             display: flex;
@@ -87,34 +75,39 @@
             align-items: center;
         }
 
-        .input-modes {
+        .logo {
+            font-size: 1.5em;
+            font-weight: 300;
+            margin-bottom: 2rem;
+            color: var(--text-color);
+        }
+
+        /* --- MODE TOGGLE --- */
+        .mode-toggle {
             display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
         }
-
         .mode-btn {
-            background: none;
-            border: none;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--input-border);
+            border-radius: 9999px;
+            background: transparent;
             color: var(--btn-inactive-color);
-            padding: 0.5rem;
-            position: relative;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
         }
-
         .mode-btn.active {
-            color: var(--btn-active-color);
-            font-weight: 600;
+            background: var(--btn-active-color);
+            color: var(--bg-color);
+            border-color: var(--btn-active-color);
         }
 
-        #mainForm {
-            width: 100%;
-            position: relative;
-        }
-
-        #mainInput {
+        /* --- SEARCH WRAPPER --- */
+        #searchWrapper { width: 100%; }
+        #searchForm { width: 100%; position: relative; }
+        #searchInput {
             width: 100%;
             padding: 1rem 1.5rem;
             font-size: 1.125rem;
@@ -123,181 +116,93 @@
             background: var(--input-bg);
             color: var(--text-color);
             outline: none;
-            transition: all .2s ease;
+            box-sizing: border-box;
         }
 
-        #mainInput:focus {
-            border-color: var(--input-focus-border);
-            box-shadow: 0 0 0 3px rgba(128,128,128,.1);
+        /* --- ASK WRAPPER (CHAT UI) --- */
+        #askWrapper {
+            width: 100%;
+            max-width: 700px;
+            height: 70vh;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
-
-        /* --- Chat View --- */
+        
+        /* Chat history */
         .chat-history {
             flex: 1;
             overflow-y: auto;
-            padding: 2rem;
-        }
-
-        .chat-input-area {
-            padding: 1rem;
-            max-width: 800px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        .chat-input-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 0.75rem 1rem;
-            border-radius: 9999px;
+            padding: var(--spacing-2);
             border: 1px solid var(--input-border);
+            border-radius: var(--radius-md);
             background: var(--input-bg);
-            color: var(--text-color);
-            outline: none;
-            font-size: 1rem;
         }
-
-        .chat-send-btn {
-            background: var(--btn-active-color);
-            color: var(--bg-color);
-            border: none;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-
-        /* --- Chat Messages --- */
         .chat-msg {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 1.5rem;
-            max-width: 80%;
-        }
-        .user-msg {
-            align-self: flex-end;
-            align-items: flex-end;
-        }
-        .assistant-msg {
-            align-self: flex-start;
-            align-items: flex-start;
-        }
-
-        .chat-label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--btn-inactive-color);
-            margin-bottom: 0.25rem;
-        }
-
-        .chat-content {
-            padding: 0.5rem 0;
-            word-wrap: break-word;
+            margin-bottom: var(--spacing-3);
             white-space: pre-wrap;
-            line-height: 1.6;
+            line-height: 1.5;
         }
+        .user-msg { text-align: right; }
+        .chat-label { font-size: 0.8rem; font-weight: 600; margin-bottom: var(--spacing-1); }
+        .chat-content { white-space: pre-wrap; word-wrap: break-word; }
+        .chat-content p:not(:last-child) { margin-bottom: var(--spacing-3); }
+        .chat-content ul, .chat-content ol { padding-left: var(--spacing-5); }
+        .chat-content pre { background: var(--surface-elevated); padding: var(--spacing-3); border-radius: var(--radius-md); overflow-x: auto; }
+        .chat-content code { font-family: monospace; background: var(--surface-elevated); padding: 2px 5px; border-radius: 0.25rem; }
+        .chat-content pre code { background: none; padding: 0; }
 
-        .chat-content p:last-child { margin-bottom: 0; }
+        /* Input Area */
+        .chat-input-area { padding-top: var(--spacing-2); border-top: 1px solid var(--input-border); }
+        .context-pills-container { display: flex; gap: var(--spacing-2); margin-bottom: var(--spacing-2); overflow-x: auto; padding-bottom: var(--spacing-1); }
+        .context-pill { display: flex; align-items: center; gap: var(--spacing-2); background: var(--surface-hover); border-radius: var(--radius-full); padding: var(--spacing-1) var(--spacing-2); font-size: 0.75rem; }
+        .context-pill-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+        .context-pill-remove { background: none; border: none; color: var(--text-tertiary); cursor: pointer; }
         
-        /* --- Context Pills & Suggestions --- */
-        .context-pills-container {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
+        .chat-input-container { display: flex; align-items: center; gap: var(--spacing-2); }
+        .chat-input-wrapper { flex: 1; position: relative; }
+        .chat-input { width: 100%; padding: var(--spacing-3) var(--spacing-4); background: var(--surface-elevated); border: 1px solid var(--input-border); border-radius: var(--radius-full); }
+        .chat-send-btn { background: var(--btn-active-color); color: var(--bg-color); border: none; border-radius: var(--radius-full); width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
 
-        .context-pill {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--input-bg);
-            border: 1px solid var(--input-border);
-            border-radius: 9999px;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.8rem;
-            font-weight: 500;
-            max-width: 200px;
-        }
-
-        .context-pill-title {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .context-pill-remove {
-            background: none;
-            border: none;
-            color: var(--btn-inactive-color);
-            cursor: pointer;
-            padding: 0;
-            font-size: 1rem;
-            line-height: 1;
-        }
-
-        #tabSuggestions {
-            position: absolute;
-            bottom: calc(100% + 0.5rem);
-            left: 0;
-            right: 0;
-            background: var(--input-bg);
-            border: 1px solid var(--input-border);
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            z-index: 10;
-            max-height: 220px;
-            overflow-y: auto;
-            display: none;
-        }
-
-        .suggestion-item {
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-            border-bottom: 1px solid var(--input-border);
-        }
-        .suggestion-item:last-child { border-bottom: none; }
-        .suggestion-item:hover, .suggestion-item.selected { background: rgba(128,128,128,0.1); }
+        .tab-suggestions { display: none; position: absolute; bottom: calc(100% + var(--spacing-1)); left: 0; right: 0; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-md); max-height: 200px; overflow-y: auto; z-index: 101; }
+        .suggestion-item { padding: var(--spacing-2) var(--spacing-3); cursor: pointer; }
+        .suggestion-item:hover { background: var(--surface-hover); }
         .suggestion-title { font-weight: 500; }
-        .suggestion-url { font-size: 0.8rem; color: var(--btn-inactive-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
+        .suggestion-url { font-size: 0.8rem; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     </style>
 </head>
 <body>
-    <div class="prompt-container">
-        <div class="prompt-wrapper">
-            <div id="contextPillsContainer" class="context-pills-container"></div>
-            <div class="input-modes">
-                <button id="searchModeBtn" class="mode-btn active">Search</button>
-                <button id="askModeBtn" class="mode-btn">Ask</button>
+    <div class="container">
+        <div class="main-wrapper" id="mainWrapper">
+            <div class="logo">AI Browser</div>
+            <div class="mode-toggle" id="modeToggle">
+                <button id="modeSearch" class="mode-btn active">Search</button>
+                <button id="modeAsk" class="mode-btn">Ask</button>
             </div>
-            <form id="mainForm" autocomplete="off">
-                <div id="tabSuggestions"></div>
-                <input id="mainInput" type="text" placeholder="Search anything..." autofocus />
-            </form>
-        </div>
-    </div>
 
-    <div class="chat-container">
-        <div class="chat-history" id="chatHistory"></div>
-        <div class="chat-input-area">
-            <form class="chat-input-container" id="chatInputForm" autocomplete="off">
-                <input id="chatInput" class="chat-input" type="text" placeholder="Ask a follow-up..." />
-                <button type="submit" class="chat-send-btn" id="chatSendBtn" aria-label="Send message">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M7 11l5-5 5 5M7 17l5-5 5 5"/>
-                    </svg>
-                </button>
-            </form>
+            <!-- Search Mode UI -->
+            <div id="searchWrapper">
+                <form id="searchForm" autocomplete="off">
+                    <input id="searchInput" type="text" placeholder="Search or enter website" autofocus />
+                </form>
+            </div>
+
+            <!-- Ask Mode UI (hidden by default) -->
+            <div id="askWrapper" style="display:none;">
+                <div class="chat-history" id="chatHistory" aria-live="polite"></div>
+                <div class="chat-input-area">
+                    <div id="contextPillsContainer" class="context-pills-container"></div>
+                    <form class="chat-input-container" id="chatInputForm">
+                        <div class="chat-input-wrapper">
+                            <input id="chatInput" class="chat-input" type="text" placeholder="Ask a question..." />
+                            <div id="tabSuggestions" class="tab-suggestions"></div>
+                        </div>
+                        <button type="submit" class="chat-send-btn" id="chatSendBtn" aria-label="Send message">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -305,273 +210,229 @@
         class NewTabManager {
             constructor() {
                 this.elements = {
-                    body: document.body,
-                    searchModeBtn: document.getElementById('searchModeBtn'),
-                    askModeBtn: document.getElementById('askModeBtn'),
-                    mainForm: document.getElementById('mainForm'),
-                    mainInput: document.getElementById('mainInput'),
-                    chatHistory: document.getElementById('chatHistory'),
-                    chatInputForm: document.getElementById('chatInputForm'),
-                    chatInput: document.getElementById('chatInput'),
-                    tabSuggestions: document.getElementById('tabSuggestions'),
-                    contextPillsContainer: document.getElementById('contextPillsContainer'),
+                    modeSearch: document.getElementById('modeSearch'),
+                    modeAsk: document.getElementById('modeAsk'),
+                    searchWrapper: document.getElementById('searchWrapper'),
+                    askWrapper: document.getElementById('askWrapper'),
+                    searchInput: document.getElementById('searchInput'),
+                    searchForm: document.getElementById('searchForm'),
                 };
-
-                this.mode = 'search'; // 'search' or 'ask'
-                this.session = [];
-                this.marked = window.marked;
-                this.availableTabs = [];
-                this.referencedTabs = new Set();
-
+                this.mode = 'search';
+                this.askManager = null;
                 this.setupEventListeners();
-                this.updateInputPlaceholder();
-                this.setupStreamedChatResponse();
             }
 
             setupEventListeners() {
-                this.elements.searchModeBtn.addEventListener('click', () => this.setMode('search'));
-                this.elements.askModeBtn.addEventListener('click', () => this.setMode('ask'));
-
-                this.elements.mainForm.addEventListener('submit', (e) => {
+                this.elements.modeSearch.addEventListener('click', () => this.switchMode('search'));
+                this.elements.modeAsk.addEventListener('click', () => this.switchMode('ask'));
+                this.elements.searchForm.addEventListener('submit', (e) => {
                     e.preventDefault();
-                    this.handleMainSubmit();
+                    this.handleSearch();
                 });
+            }
 
-                this.elements.mainInput.addEventListener('input', () => this.handleMainInput());
-                this.elements.tabSuggestions.addEventListener('click', (e) => this.handleSuggestionClick(e));
+            switchMode(newMode) {
+                if (this.mode === newMode) return;
+                this.mode = newMode;
 
+                const isSearch = newMode === 'search';
+                this.elements.modeSearch.classList.toggle('active', isSearch);
+                this.elements.modeAsk.classList.toggle('active', !isSearch);
+                this.elements.searchWrapper.style.display = isSearch ? 'block' : 'none';
+                this.elements.askWrapper.style.display = isSearch ? 'none' : 'flex';
+
+                if (isSearch) {
+                    this.elements.searchInput.focus();
+                } else {
+                    if (!this.askManager) {
+                        this.askManager = new AskManager();
+                    }
+                    this.askManager.elements.chatInput.focus();
+                }
+            }
+
+            handleSearch() {
+                const value = this.elements.searchInput.value.trim();
+                if (!value) return;
+                let target = value;
+                if (!/^https?:\/\//i.test(value)) {
+                    target = value.includes('.') && !value.includes(' ')
+                        ? 'https://' + value
+                        : 'https://www.google.com/search?q=' + encodeURIComponent(value);
+                }
+                window.location.href = target;
+            }
+        }
+
+        class AskManager {
+            constructor() {
+                this.elements = {
+                    chatHistory: document.getElementById('chatHistory'),
+                    contextPillsContainer: document.getElementById('contextPillsContainer'),
+                    chatInputForm: document.getElementById('chatInputForm'),
+                    chatInput: document.getElementById('chatInput'),
+                    tabSuggestions: document.getElementById('tabSuggestions'),
+                };
+                this.session = [];
+                this.referencedTabs = new Set();
+                this.allTabs = [];
+                this.currentStream = null;
+                this.marked = window.marked;
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
                 this.elements.chatInputForm.addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.handleChatSend();
                 });
-
-                window.addEventListener('keydown', (e) => {
-                    if (e.key === 'Tab' && document.activeElement === this.elements.mainInput) {
-                        e.preventDefault();
-                        this.setMode(this.mode === 'search' ? 'ask' : 'search');
-                    }
-                });
-
-                window.addEventListener('message', (e) => {
-                    if (e.data?.type === 'tabs-response') {
-                        this.availableTabs = e.data.tabs;
-                        const query = this.elements.mainInput.value.substring(this.elements.mainInput.value.lastIndexOf('@') + 1);
-                        this.showTabSuggestions(query);
-                    }
-                });
+                this.elements.chatInput.addEventListener('input', () => this.handleChatInput());
+                this.elements.tabSuggestions.addEventListener('click', (e) => this.handleSuggestionClick(e));
+                window.addEventListener('message', (e) => this.handleHostMessage(e));
             }
-
-            setupStreamedChatResponse() {
-                window.addEventListener('message', (e) => {
-                    if (e.data?.type !== 'chat-stream-response') return;
-                    
-                    const data = e.data;
-                    const assistantMessage = this.session[this.session.length - 1];
-                    const assistantMessageIndex = this.session.length - 1;
-
-                    if (data.token) {
-                        assistantMessage.content += data.token;
-                        const msgContainer = document.getElementById(`asst-msg-${assistantMessageIndex}`);
-                        if (msgContainer) {
-                            const contentEl = msgContainer.querySelector('.chat-content');
-                            // Update with raw text during stream for performance, then parse once at the end.
-                            contentEl.textContent = assistantMessage.content;
-                            this.elements.chatHistory.scrollTop = this.elements.chatHistory.scrollHeight;
-                        }
-                    } else if (data.done) {
-                        const msgContainer = document.getElementById(`asst-msg-${assistantMessageIndex}`);
-                        if (msgContainer) {
-                            const contentEl = msgContainer.querySelector('.chat-content');
-                            contentEl.innerHTML = this.marked.parse(assistantMessage.content);
-                        }
-                    } else if (data.error) {
-                        assistantMessage.content = `Error: ${data.error}`;
-                        this.renderChatHistory();
-                    }
-                });
-            }
-
-            setMode(newMode) {
-                if (this.mode === newMode) return;
-                this.mode = newMode;
-                this.elements.searchModeBtn.classList.toggle('active', newMode === 'search');
-                this.elements.askModeBtn.classList.toggle('active', newMode === 'ask');
-                this.updateInputPlaceholder();
-                this.elements.mainInput.focus();
-            }
-
-            updateInputPlaceholder() {
-                this.elements.mainInput.placeholder = this.mode === 'search' 
-                    ? 'Search anything...' 
-                    : 'Ask AI anything...';
-            }
-
-            handleMainSubmit() {
-                const value = this.elements.mainInput.value.trim();
-                if (!value) return;
-
-                if (this.mode === 'search') {
-                    this.navigate(value);
-                } else {
-                    this.startChat(value);
+            
+            handleHostMessage({ data }) {
+                if (!data || !data.type) return;
+                switch (data.type) {
+                    case 'tabs-response':
+                        this.allTabs = data.tabs || [];
+                        this.renderTabSuggestions(this.elements.chatInput.value);
+                        break;
+                    case 'chat-stream-response':
+                        this.handleStreamResponse(data);
+                        break;
                 }
             }
 
-            handleMainInput() {
-                const value = this.elements.mainInput.value;
-                const atIndex = value.lastIndexOf('@');
+            handleChatSend() {
+                const content = this.elements.chatInput.value.trim();
+                if (!content) return;
+                this.elements.chatInput.value = '';
 
-                if (this.mode === 'ask' && atIndex > -1 && (atIndex === 0 || /\s/.test(value[atIndex - 1]))) {
-                    window.parent.postMessage({ type: 'request-tabs' }, '*');
+                this.session.push({ role: 'user', content });
+                const assistantMsg = { role: 'assistant', content: '' };
+                this.session.push(assistantMsg);
+                this.renderChatHistory();
+
+                const reqId = Date.now().toString();
+                this.currentStream = { id: reqId, assistantIndex: this.session.length - 1 };
+
+                const chatData = {
+                    type: 'new-tab-chat-send',
+                    reqId,
+                    session: this.session.slice(0, -1),
+                    referencedTabIds: [...this.referencedTabs]
+                };
+                console.log('NewTab: Sending new-tab-chat-send:', chatData);
+                window.postMessage(
+                    chatData,
+                    '*'
+                );
+            }
+
+            handleStreamResponse(data) {
+                if (!this.currentStream || data.id !== this.currentStream.id) return;
+                
+                const assistantMsg = this.session[this.currentStream.assistantIndex];
+                if (data.token) {
+                    assistantMsg.content += data.token;
+                    this.updateAssistantMessage(assistantMsg.content, false);
+                }
+                if (data.done || data.error) {
+                    if(data.error) assistantMsg.content = `Error: ${data.error}`;
+                    this.updateAssistantMessage(assistantMsg.content, true);
+                    this.currentStream = null;
+                }
+            }
+            
+            updateAssistantMessage(content, isFinal) {
+                const msgEls = this.elements.chatHistory.querySelectorAll('.assistant-msg');
+                const lastMsgEl = msgEls[msgEls.length - 1];
+                if (lastMsgEl) {
+                    const contentEl = lastMsgEl.querySelector('.chat-content');
+                    contentEl.innerHTML = isFinal ? this.marked.parse(content) : content.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
+                    this.elements.chatHistory.scrollTop = this.elements.chatHistory.scrollHeight;
+                }
+            }
+
+            renderChatHistory() {
+                this.elements.chatHistory.innerHTML = this.session.map(msg => `
+                    <div class="chat-msg ${msg.role}-msg">
+                        <div class="chat-label">${msg.role === 'user' ? 'You' : 'AI'}</div>
+                        <div class="chat-content">${this.marked.parse(msg.content || '')}</div>
+                    </div>
+                `).join('');
+                this.elements.chatHistory.scrollTop = this.elements.chatHistory.scrollHeight;
+            }
+
+            handleChatInput() {
+                const value = this.elements.chatInput.value;
+                const atIndex = value.lastIndexOf('@');
+                if (atIndex > -1 && (atIndex === 0 || /\s/.test(value[atIndex - 1]))) {
+                    console.log('NewTab: Sending request-tabs');
+                    window.postMessage({ type: 'request-tabs' }, '*');
+                    this.renderTabSuggestions(value);
                 } else {
                     this.hideTabSuggestions();
                 }
             }
 
-            showTabSuggestions(query) {
-                const filteredTabs = this.availableTabs.filter(tab =>
-                    !this.referencedTabs.has(tab.id) &&
-                    (tab.title.toLowerCase().includes(query.toLowerCase()) ||
-                     tab.url.toLowerCase().includes(query.toLowerCase()))
-                );
+            renderTabSuggestions(value) {
+                const query = value.substring(value.lastIndexOf('@') + 1).toLowerCase();
+                const availableTabs = this.allTabs.filter(t => !this.referencedTabs.has(t.id));
+                const filtered = query
+                    ? availableTabs.filter(t => t.title.toLowerCase().includes(query) || t.url.toLowerCase().includes(query))
+                    : availableTabs;
 
-                if (filteredTabs.length > 0) {
-                    this.elements.tabSuggestions.innerHTML = filteredTabs.map(tab => `
-                        <div class="suggestion-item" data-tab-id="${tab.id}">
+                if (filtered.length > 0) {
+                    this.elements.tabSuggestions.innerHTML = filtered.map(tab => `
+                        <div class="suggestion-item" data-tab-id="${tab.id}" data-tab-title="${this.escapeHtml(tab.title)}">
                             <div class="suggestion-title">${this.escapeHtml(tab.title)}</div>
                             <div class="suggestion-url">${this.escapeHtml(tab.url)}</div>
-                        </div>
-                    `).join('');
+                        </div>`).join('');
                     this.elements.tabSuggestions.style.display = 'block';
                 } else {
                     this.hideTabSuggestions();
                 }
             }
-
-            hideTabSuggestions() {
-                this.elements.tabSuggestions.style.display = 'none';
-            }
-
+            
             handleSuggestionClick(e) {
                 const item = e.target.closest('.suggestion-item');
                 if (!item) return;
 
                 const tabId = item.getAttribute('data-tab-id');
+                const tabTitle = item.getAttribute('data-tab-title');
                 this.referencedTabs.add(tabId);
                 this.renderContextPills();
-
-                const atIndex = this.elements.mainInput.value.lastIndexOf('@');
-                this.elements.mainInput.value = this.elements.mainInput.value.substring(0, atIndex);
+                
+                const atIndex = this.elements.chatInput.value.lastIndexOf('@');
+                this.elements.chatInput.value = this.elements.chatInput.value.substring(0, atIndex);
                 this.hideTabSuggestions();
-                this.elements.mainInput.focus();
+                this.elements.chatInput.focus();
             }
 
             renderContextPills() {
                 this.elements.contextPillsContainer.innerHTML = '';
-                for (const tabId of this.referencedTabs) {
-                    const tab = this.availableTabs.find(t => t.id === tabId);
-                    if (tab) {
-                        const pill = document.createElement('div');
-                        pill.className = 'context-pill';
-                        pill.innerHTML = `
-                            <span class="context-pill-title" title="${this.escapeHtml(tab.title)}">${this.escapeHtml(tab.title)}</span>
-                            <button class="context-pill-remove" data-tab-id="${tab.id}">&times;</button>
-                        `;
-                        pill.querySelector('.context-pill-remove').addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            this.referencedTabs.delete(tab.id);
-                            this.renderContextPills();
-                        });
-                        this.elements.contextPillsContainer.appendChild(pill);
-                    }
-                }
-            }
-
-            navigate(value) {
-                let target = value;
-                if (!/^https?:\/\//i.test(value)) {
-                    if (value.includes('.') && !value.includes(' ')) {
-                        target = 'https://' + value;
-                    } else {
-                        target = 'https://start.duckduckgo.com/?q=' + encodeURIComponent(value);
-                    }
-                }
-                window.location.href = target;
-            }
-
-            startChat(initialMessage) {
-                this.elements.body.classList.add('chat-active');
-                this.elements.chatInput.focus();
-                this.handleChatSend(initialMessage);
-            }
-
-            async handleChatSend(messageOverride) {
-                const message = messageOverride || this.elements.chatInput.value.trim();
-                if (!message) return;
-
-                if (!messageOverride) {
-                    this.elements.chatInput.value = '';
-                }
-
-                this.session.push({ role: 'user', content: message });
-                this.renderChatHistory();
-
-                const assistantMessage = { role: 'assistant', content: '' };
-                this.session.push(assistantMessage);
-                const assistantMessageIndex = this.session.length - 1;
-
-                this.renderChatHistory();
-
-                const reqId = Date.now().toString();
-                const referencedTabIds = Array.from(this.referencedTabs);
-
-                // Delegate chat sending to the parent BrowserManager
-                window.parent.postMessage({
-                    type: 'new-tab-chat-send',
-                    reqId: reqId,
-                    session: this.session.slice(0, -1),
-                    referencedTabIds: referencedTabIds,
-                }, '*');
-
-                // The rest of the logic will be moved to a message listener
-                // that receives forwarded stream chunks from the parent.
-            }
-
-            renderChatHistory() {
-                this.elements.chatHistory.innerHTML = '';
-                this.session.forEach((msg, index) => {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = `chat-msg ${msg.role === 'user' ? 'user-msg' : 'assistant-msg'}`;
-                    if (msg.role === 'assistant') {
-                        wrapper.id = `asst-msg-${index}`;
-                    }
-                    
-                    const label = document.createElement('div');
-                    label.className = 'chat-label';
-                    label.textContent = msg.role === 'user' ? 'You' : 'AI';
-                    
-                    const content = document.createElement('div');
-                    content.className = 'chat-content';
-                    content.innerHTML = this.marked.parse(msg.content || ' ');
-                    
-                    wrapper.appendChild(label);
-                    wrapper.appendChild(content);
-                    this.elements.chatHistory.appendChild(wrapper);
-                });
-                this.elements.chatHistory.scrollTop = this.elements.chatHistory.scrollHeight;
-            }
-
-            escapeHtml(str) {
-                return str.replace(/[&<>"']/g, (match) => {
-                    return {
-                        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-                    }[match];
+                this.referencedTabs.forEach(tabId => {
+                    const tab = this.allTabs.find(t => t.id === tabId);
+                    const pill = document.createElement('div');
+                    pill.className = 'context-pill';
+                    pill.innerHTML = `
+                        <span class="context-pill-title" title="${this.escapeHtml(tab ? tab.title : tabId)}">${this.escapeHtml(tab ? tab.title : tabId)}</span>
+                        <button class="context-pill-remove" data-tab-id="${tabId}">&times;</button>`;
+                    pill.querySelector('.context-pill-remove').addEventListener('click', () => {
+                        this.referencedTabs.delete(tabId);
+                        this.renderContextPills();
+                    });
+                    this.elements.contextPillsContainer.appendChild(pill);
                 });
             }
 
+            hideTabSuggestions() { this.elements.tabSuggestions.style.display = 'none'; }
+            escapeHtml(str) { return str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
         }
 
-        new NewTabManager();
+        document.addEventListener('DOMContentLoaded', () => new NewTabManager());
     </script>
 </body>
 </html> 

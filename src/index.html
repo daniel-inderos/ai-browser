@@ -64,7 +64,7 @@
                         <polyline points="13 7 18 12 13 17" />
                     </svg>
                 </button>
-                <button class="chat-btn" id="chatBtn" title="AI Chat (⌘I)" aria-label="Open AI Chat">
+                <button class="chat-btn" id="chatBtn" title="AI Chat (⌘E)" aria-label="Open AI Chat">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                     </svg>
@@ -167,6 +167,8 @@
 
                 // Listen for messages from webviews
                 window.addEventListener('message', (e) => {
+                    console.log('BrowserManager received message:', e.data);
+                    console.log('BrowserManager received message from source:', e.source);
                     if (!e.data || !e.data.type) return;
 
                     // Handle shortcut messages from newtab.html
@@ -194,22 +196,37 @@
                                 .filter(t => t.id !== sourceWebview.id && !t.url.includes('newtab.html'))
                                 .map(t => ({ id: t.id, title: t.title, url: t.url }));
                             
-                            // Use the webview's postMessage API to communicate with the guest page
+                                                    // Use the webview's postMessage API to communicate with the guest page
+                        try {
                             sourceWebview.webview.postMessage({ type: 'tabs-response', tabs: tabData }, '*');
+                        } catch (err) {
+                            console.error('Failed to send tabs response:', err);
+                        }
                         }
                     }
 
                     // Handle chat requests from newtab.html
                     if (e.data.type === 'new-tab-chat-send') {
-                        const sourceWebview = this.tabs.find(tab => tab.webview.contentWindow === e.source);
+                        console.log('Received new-tab-chat-send message:', e.data);
+                        console.log('Handling new-tab-chat-send with data:', e.data);
+                        // Find the source webview by checking if it contains newtab.html
+                        const sourceWebview = this.tabs.find(tab => 
+                            tab.url && tab.url.includes('newtab.html') && tab.id === this.activeTabId
+                        );
                         if (sourceWebview) {
+                            console.log('Found source webview, calling handleNewTabChat');
+                            console.log('Source webview found:', sourceWebview.id);
                             this.handleNewTabChat(e.data, sourceWebview);
+                        } else {
+                            console.error('Could not find source webview for chat request');
                         }
                     }
                 });
             }
 
             async handleNewTabChat(data, sourceTab) {
+                console.log('handleNewTabChat called with:', data);
+                console.log('handleNewTabChat starting for reqId:', data.reqId);
                 const { reqId, session, referencedTabIds } = data;
                 const contexts = [];
 
@@ -219,6 +236,7 @@
                         try {
                             const context = await this.getPageContext(referencedTab);
                             if (context) {
+                                console.log('Got context for tab:', tabId);
                                 contexts.push(context);
                             }
                         } catch (err) {
@@ -227,21 +245,55 @@
                     }
                 }
 
-                window.electronAPI.sendChat(reqId, session, contexts);
+                console.log('Sending chat request with contexts:', contexts.length);
+                console.log('Sending to electronAPI.sendChat');
+                try {
+                    await window.electronAPI.sendChat(reqId, session, contexts);
+                } catch (error) {
+                    console.error('Error sending chat request:', error);
+                    // Send error back to newtab
+                    sourceTab.webview.postMessage({ 
+                        type: 'chat-stream-response', 
+                        id: reqId, 
+                        error: error.message 
+                    }, '*');
+                    return;
+                }
 
                 const streamHandler = (streamData) => {
+                    console.log('Received stream data:', streamData);
+                    console.log('Stream handler called with:', streamData);
                     // Only handle responses for this request and forward to the source webview
                     if (streamData.id === reqId) {
-                        // Forward streamed chat data to the webview using the webview's postMessage API
-                        sourceTab.webview.postMessage({ type: 'chat-stream-response', ...streamData }, '*');
+                        // Forward streamed chat data to the webview using executeJavaScript
+                        console.log('Sending stream data to webview:', { type: 'chat-stream-response', ...streamData });
+                        console.log('Attempting to send to webview via executeJavaScript');
+                        const messageData = JSON.stringify({ type: 'chat-stream-response', ...streamData });
+                        sourceTab.webview.executeJavaScript(`
+                            window.dispatchEvent(new MessageEvent('message', {
+                                data: ${messageData},
+                                origin: '*'
+                            }));
+                        `).catch(err => {
+                            console.error('Failed to send message to webview:', err);
+                            // Fallback: try postMessage if executeJavaScript fails
+                            try {
+                                sourceTab.webview.postMessage({ type: 'chat-stream-response', ...streamData }, '*');
+                            } catch (fallbackErr) {
+                                console.error('Fallback postMessage also failed:', fallbackErr);
+                            }
+                        });
+                        
                         if (streamData.done || streamData.error) {
                             // Clean up listener after completion or error
+                            console.log('Stream done or error, removing listener');
                             window.electronAPI.removeListener('chat-stream', streamHandler);
                         }
                     }
                 };
 
                 // Ensure we don't have duplicate listeners
+                console.log('Adding chat-stream listener');
                 window.electronAPI.onChatStream(streamHandler);
             }
 
@@ -329,6 +381,10 @@
                                 e.preventDefault();
                                 this.urlBar.focus();
                                 break;
+                            case 'e':
+                                e.preventDefault();
+                                this.toggleChatSidebar();
+                                break;
                         }
                     }
                 });
@@ -391,6 +447,41 @@
                 tabTitle.textContent = 'New Tab';
                 tabTitle.setAttribute('aria-label', 'Tab title');
                 
+                const tabFavicon = document.createElement('img');
+                tabFavicon.className = 'tab-favicon';
+                // Use empty src initially; will update once favicon arrives
+                tabFavicon.alt = '';
+                
+                // Helper to set favicon through fallback when direct event missing
+                const updateFaviconFallback = async () => {
+                    try {
+                        // Try to find <link rel="icon"> inside the page
+                        const candidate = await webview.executeJavaScript(`(() => {
+                            const relIcons = Array.from(document.querySelectorAll('link[rel~="icon"]'));
+                            if (relIcons.length) return relIcons[0].href || null;
+                            return null;
+                        })()`, true);
+                        let iconUrl = candidate;
+                        if (iconUrl) {
+                            // Resolve relative paths
+                            if (iconUrl.startsWith('/')) {
+                                try {
+                                    iconUrl = new URL(iconUrl, webview.getURL()).href;
+                                } catch (err) {}
+                            }
+                            tabFavicon.src = iconUrl;
+                        } else {
+                            // Use Google favicon service as final fallback
+                            try {
+                                const pageOrigin = new URL(webview.getURL()).origin;
+                                tabFavicon.src = `https://www.google.com/s2/favicons?sz=32&domain_url=${encodeURIComponent(pageOrigin)}`;
+                            } catch (err) {}
+                        }
+                    } catch (err) {
+                        console.error('Failed to fetch favicon via fallback:', err);
+                    }
+                };
+
                 const closeBtn = document.createElement('button');
                 closeBtn.className = 'tab-close-btn';
                 closeBtn.setAttribute('aria-label', 'Close tab');
@@ -407,6 +498,11 @@
                 });
 
                 tabElement.appendChild(tabTitle);
+                tabElement.appendChild(tabFavicon);
+                // Ensure favicon appears before the title for better UX
+                if (tabElement.contains(tabTitle)) {
+                    tabElement.insertBefore(tabFavicon, tabTitle);
+                }
                 tabElement.appendChild(closeBtn);
                 
                 tabElement.addEventListener('click', () => this.switchToTab(tabId));
@@ -439,27 +535,48 @@
 
                 // Enhanced webview event handling
                 webview.addEventListener('dom-ready', () => {
-                    tab.title = webview.getTitle() || 'New Tab';
-                    tabTitle.textContent = tab.title;
-                    tabTitle.setAttribute('title', tab.title);
-                    if (this.activeTabId === tabId) {
-                        this.urlBar.value = webview.getURL();
-                        this.hideLoading();
-                        if (webview.getURL().includes('newtab.html')) {
-                            webview.focus();
-                            webview.executeJavaScript('document.getElementById("mainInput")?.focus()');
+                    try {
+                        tab.title = webview.getTitle() || 'New Tab';
+                        tabTitle.textContent = tab.title;
+                        tabTitle.setAttribute('title', tab.title);
+                        if (this.activeTabId === tabId) {
+                            this.urlBar.value = webview.getURL();
+                            this.hideLoading();
+                            if (webview.getURL().includes('newtab.html')) {
+                                webview.focus();
+                                // Delay JavaScript execution to ensure page is fully loaded
+                                setTimeout(() => {
+                                    webview.executeJavaScript('document.getElementById("mainInput")?.focus()').catch(err => {
+                                        console.log('Focus script failed (expected during initialization):', err.message);
+                                    });
+                                }, 100);
+                            }
                         }
+                    } catch (error) {
+                        console.error('Error in dom-ready handler:', error);
                     }
                 });
 
-                webview.addEventListener('page-title-updated', (e) => {
-                    tab.title = e.title;
-                    tabTitle.textContent = tab.title;
-                    tabTitle.setAttribute('title', tab.title);
+                webview.addEventListener('page-title-updated', (_event) => {
+                    const newTitle = webview.getTitle() || 'New Tab';
+                    tab.title = newTitle;
+                    tabTitle.textContent = newTitle;
+                    tabTitle.setAttribute('title', newTitle);
+                });
+                // Add listener to capture page favicon changes
+                webview.addEventListener('page-favicon-updated', async (event) => {
+                    if (event.favicons && event.favicons.length > 0) {
+                        tabFavicon.src = event.favicons[0];
+                    } else {
+                        // If favicon still empty, attempt fallback
+                        await updateFaviconFallback();
+                    }
                 });
 
                 webview.addEventListener('did-navigate', (e) => {
                     tab.url = e.url;
+                    // Clear favicon when navigating to new main page
+                    tabFavicon.src = '';
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = e.url;
                         this.updateNavBarVisibility(e.url);
@@ -468,6 +585,8 @@
 
                 webview.addEventListener('did-navigate-in-page', (e) => {
                     tab.url = e.url;
+                    // Clear favicon for in-page navigations too (e.g., SPA route changes)
+                    tabFavicon.src = '';
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = e.url;
                         this.updateNavBarVisibility(e.url);
@@ -485,13 +604,22 @@
                 webview.addEventListener('did-start-loading', () => {
                     tab.isLoading = true;
                     tabTitle.textContent = 'Loading...';
+                    // Removed favicon reset here to avoid flicker; handled on navigation
                     if (this.activeTabId === tabId) {
                         this.showLoading();
                     }
                 });
 
-                webview.addEventListener('did-stop-loading', () => {
+                webview.addEventListener('did-stop-loading', async () => {
                     tab.isLoading = false;
+                    const finalTitle = webview.getTitle() || tab.title;
+                    tab.title = finalTitle;
+                    tabTitle.textContent = finalTitle;
+                    tabTitle.setAttribute('title', finalTitle);
+                    // If favicon still empty, attempt fallback
+                    if (!tabFavicon.src) {
+                        await updateFaviconFallback();
+                    }
                     if (this.activeTabId === tabId) {
                         this.hideLoading();
                     }
@@ -507,7 +635,21 @@
                 if (!this.chatSessions.has(tabId)) {
                     this.chatSessions.set(tabId, []);
                 }
-                this.switchToTab(tabId);
+
+                // If this is the first tab, mark it as active immediately.
+                // The full switchToTab call, which can inject JS, will be safely
+                // handled by the dom-ready event listener below.
+                if (this.tabs.length === 1) {
+                    this.activeTabId = tabId;
+                }
+
+                // When the webview is ready, perform the full switch if it's the active tab.
+                // This prevents race conditions where we try to execute JS before the page is loaded.
+                webview.addEventListener('dom-ready', () => {
+                    if (this.activeTabId === tabId) {
+                        this.switchToTab(tabId);
+                    }
+                }, { once: true });
 
                 return tab;
             }
@@ -553,7 +695,9 @@
                         this.hideChatSidebar(true); // Hide and clear for newtab
                         if (tab.webview) {
                             tab.webview.focus();
-                            tab.webview.executeJavaScript('document.getElementById("searchInput")?.focus()');
+                            tab.webview.executeJavaScript('document.getElementById("searchInput")?.focus()').catch(err => {
+                                console.log('Focus script failed:', err.message);
+                            });
                         }
                     } else {
                         if (tab.chatSidebarOpen) {
@@ -573,7 +717,9 @@
                     
                     // Guarantee the new-tab search box is focused and selected so shortcuts work without extra clicks
                     if (tab.url && tab.url.includes('newtab.html') && tab.webview) {
-                        tab.webview.executeJavaScript('const i=document.getElementById("mainInput"); if(i){ i.focus(); i.select(); }');
+                        tab.webview.executeJavaScript('const i=document.getElementById("mainInput"); if(i){ i.focus(); i.select(); }').catch(err => {
+                            console.log('Focus script failed:', err.message);
+                        });
                     }
                 }
             }
@@ -740,12 +886,12 @@
                 }
                 const webview = tab.webview;
 
-                const pageUrl = webview.getURL();
-                if (!pageUrl.startsWith('http')) {
-                    return null;
-                }
-                const pageTitle = webview.getTitle();
                 try {
+                    const pageUrl = webview.getURL();
+                    if (!pageUrl.startsWith('http')) {
+                        return null;
+                    }
+                    const pageTitle = webview.getTitle();
                     const pageContent = await webview.executeJavaScript('document.body.innerText');
                     return {
                         title: pageTitle,
@@ -753,7 +899,7 @@
                         content: pageContent.substring(0, 4000) // Truncate for performance
                     };
                 } catch (e) {
-                    console.error(`Could not get page content from ${pageUrl}: `, e);
+                    console.error(`Could not get page context: `, e);
                     return null;
                 }
             }
@@ -967,7 +1113,11 @@
 
         // Initialize the browser when the page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new BrowserManager();
+            try {
+                new BrowserManager();
+            } catch (error) {
+                console.error('Error initializing BrowserManager:', error);
+            }
         });
     </script>
 </body>

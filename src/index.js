@@ -1,3 +1,11 @@
+// Load environment variables
+require('dotenv').config();
+
+// Debug environment variables
+console.log('Environment check:');
+console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+console.log('OPENAI_API_KEY length:', process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0);
+
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('node:path');
 const { initialize, enable } = require('@electron/remote/main');
@@ -11,9 +19,12 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+console.log('App initialization starting...');
+
 let mainWindow;
 
 const createWindow = () => {
+  console.log('Creating browser window...');
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -29,19 +40,46 @@ const createWindow = () => {
     show: false, // Don't show until ready
   });
 
+  console.log('Window created, enabling remote module...');
   // Enable remote module for this window
   enable(mainWindow.webContents);
 
+  console.log('Loading browser interface...');
   // Load the browser interface
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
+    console.log('Window ready to show, displaying...');
     mainWindow.show();
+  });
+
+  // Handle renderer process errors
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load:', errorCode, errorDescription);
+  });
+
+  mainWindow.webContents.on('crashed', () => {
+    console.error('Renderer process crashed');
+  });
+
+  mainWindow.webContents.on('unresponsive', () => {
+    console.error('Renderer process unresponsive');
+  });
+
+  // Handle JavaScript errors
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`Renderer console [${level}]: ${message} at ${sourceId}:${line}`);
+  });
+
+  // Handle uncaught exceptions
+  mainWindow.webContents.on('did-fail-provisional-load', (event, errorCode, errorDescription) => {
+    console.error('Provisional load failed:', errorCode, errorDescription);
   });
 
   // Handle window closed
   mainWindow.on('closed', () => {
+    console.log('Main window closed');
     mainWindow = null;
   });
 };
@@ -51,7 +89,7 @@ ipcMain.handle('get-preload-path', () => {
 });
 
 // IPC handlers for tab management
-ipcMain.handle('create-tab', async (event, url = 'https://start.duckduckgo.com') => {
+ipcMain.handle('create-tab', async (event, url = 'https://www.google.com') => {
   if (!url) {
     url = 'newtab.html';
   }
@@ -74,7 +112,7 @@ ipcMain.handle('navigate-to', async (event, url) => {
       if (url.includes('.') && !url.includes(' ')) {
         url = 'https://' + url;
       } else {
-        url = 'https://start.duckduckgo.com/?q=' + encodeURIComponent(url);
+        url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
       }
     }
     return { success: true, url };
@@ -215,7 +253,9 @@ const createMenu = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(() => {
+  console.log('Electron app ready, creating window...');
   createWindow();
+  console.log('Creating menu...');
   createMenu();
 
   // On OS X it's common to re-create a window in the app when the
