@@ -672,13 +672,6 @@
                     this.chatSessions.set(tabId, []);
                 }
 
-                // If this is the first tab, mark it as active immediately.
-                // The full switchToTab call, which can inject JS, will be safely
-                // handled by the dom-ready event listener below.
-                if (this.tabs.length === 1) {
-                    this.activeTabId = tabId;
-                }
-
                 // When the webview is ready, perform the full switch if it's the active tab.
                 // This prevents race conditions where we try to execute JS before the page is loaded.
                 webview.addEventListener('dom-ready', () => {
@@ -686,6 +679,9 @@
                         this.switchToTab(tabId);
                     }
                 }, { once: true });
+
+                // Always focus the newly created tab
+                this.switchToTab(tabId);
 
                 return tab;
             }
