@@ -167,6 +167,8 @@
                 <button id="modeAsk" class="mode-btn">Ask</button>
             </div>
 
+            <button id="enableGroupingBtn" class="mode-btn">Enable AI Tab Groups</button>
+
             <!-- Search Mode UI -->
             <div id="searchWrapper">
                 <form id="searchForm" autocomplete="off">
@@ -223,6 +225,7 @@
                     askWrapper: document.getElementById('askWrapper'),
                     searchInput: document.getElementById('searchInput'),
                     searchForm: document.getElementById('searchForm'),
+                    enableGroupingBtn: document.getElementById('enableGroupingBtn'),
                 };
                 this.mode = 'search';
                 this.askManager = null;
@@ -235,6 +238,12 @@
                 this.elements.searchForm.addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.handleSearch();
+                });
+                this.elements.enableGroupingBtn.addEventListener('click', () => {
+                    if (window.electronAPI && window.electronAPI.sendToHost) {
+                        window.electronAPI.sendToHost('enable-grouping', {});
+                    }
+                    this.elements.enableGroupingBtn.disabled = true;
                 });
 
                 // Forward common browser shortcuts to host so they work immediately

@@ -139,6 +139,8 @@
                 this.setupKeyboardShortcuts();
                 this.chatSessions = new Map();
                 this.marked = window.marked;
+                this.aiGroupingEnabled = false;
+                this.tabGroups = [];
             }
 
             initializeElements() {
@@ -453,6 +455,8 @@
                     isLoading: false,
                     chatSidebarOpen: false, // Track chat sidebar state per tab
                     referencedTabs: new Set(), // Store IDs of all context tabs
+                    summary: null,
+                    groupId: null,
                 };
 
                 // Create enhanced tab UI with better accessibility
@@ -621,6 +625,14 @@
                                     break;
                             }
                         }
+                        if (channel === 'enable-grouping') {
+                            this.aiGroupingEnabled = true;
+                            this.tabs.forEach(t => {
+                                if (!t.url.includes('newtab.html')) {
+                                    this.summarizeTab(t);
+                                }
+                            });
+                        }
                     } catch (e) {
                         console.error('ipc-message handler error:', e);
                     }
@@ -691,6 +703,9 @@
                     }
                     if (this.activeTabId === tabId) {
                         this.hideLoading();
+                    }
+                    if (this.aiGroupingEnabled && !tab.url.includes('newtab.html')) {
+                        this.summarizeTab(tab);
                     }
                 });
 
@@ -811,6 +826,9 @@
                         // No tabs left, create a new one
                         this.createTab();
                     }
+                }
+                if (this.aiGroupingEnabled) {
+                    this.clusterTabs();
                 }
             }
 
@@ -967,6 +985,69 @@
                     console.error(`Could not get page context: `, e);
                     return null;
                 }
+            }
+
+            async summarizeTab(tab) {
+                try {
+                    const context = await this.getPageContext(tab);
+                    if (!context) return;
+                    const result = await window.electronAPI.summarizePage(tab.id, context);
+                    if (result && result.summary) {
+                        tab.summary = result.summary.trim();
+                        this.clusterTabs();
+                    }
+                } catch (e) {
+                    console.error('Failed to summarize tab:', e);
+                }
+            }
+
+            clusterTabs() {
+                if (!this.aiGroupingEnabled) return;
+                const threshold = 0.3;
+                const tokens = (str) => new Set(str.toLowerCase().split(/\W+/).filter(Boolean));
+                const groups = [];
+                const tabsWithSummary = this.tabs.filter(t => t.summary);
+                tabsWithSummary.forEach(tab => {
+                    const set = tokens(tab.summary);
+                    let matched = null;
+                    groups.forEach(g => {
+                        if (matched) return;
+                        const inter = new Set([...set].filter(x => g.tokens.has(x)));
+                        const union = new Set([...set, ...g.tokens]);
+                        const sim = inter.size / union.size;
+                        if (sim >= threshold) matched = g;
+                    });
+                    if (matched) {
+                        matched.tabs.push(tab);
+                        matched.tokens = new Set([...matched.tokens, ...set]);
+                        tab.groupId = matched.id;
+                    } else {
+                        const groupId = `group-${groups.length + 1}`;
+                        groups.push({ id: groupId, name: tab.summary.split(' ').slice(0, 3).join(' '), tokens: set, tabs: [tab] });
+                        tab.groupId = groupId;
+                    }
+                });
+                this.tabGroups = groups;
+                this.renderTabGroups();
+            }
+
+            renderTabGroups() {
+                if (!this.aiGroupingEnabled) return;
+                this.tabsContainer.innerHTML = '';
+                if (!this.tabGroups || this.tabGroups.length === 0) {
+                    this.tabs.forEach(t => this.tabsContainer.appendChild(t.tabElement));
+                    return;
+                }
+                this.tabGroups.forEach(group => {
+                    const header = document.createElement('div');
+                    header.className = 'tab-group-header';
+                    header.textContent = group.name;
+                    this.tabsContainer.appendChild(header);
+                    group.tabs.forEach(t => this.tabsContainer.appendChild(t.tabElement));
+                });
+                const groupedIds = new Set();
+                this.tabGroups.forEach(g => g.tabs.forEach(t => groupedIds.add(t.id)));
+                this.tabs.filter(t => !groupedIds.has(t.id)).forEach(t => this.tabsContainer.appendChild(t.tabElement));
             }
 
             toggleChatSidebar() {

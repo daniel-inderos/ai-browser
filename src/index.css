@@ -987,3 +987,13 @@ webview {
     font-size: inherit;
     border-radius: 0;
 }
+
+.tab-group-header {
+    padding: 0 8px;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+}
+
+#enableGroupingBtn {
+    margin-bottom: 1rem;
+}
