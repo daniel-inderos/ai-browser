@@ -1,11 +1,6 @@
 // Load environment variables
 require('dotenv').config();
 
-// Debug environment variables
-console.log('Environment check:');
-console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
-console.log('OPENAI_API_KEY length:', process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0);
-
 const { app, BrowserWindow, ipcMain, Menu, globalShortcut } = require('electron');
 const path = require('node:path');
 const { initialize, enable } = require('@electron/remote/main');

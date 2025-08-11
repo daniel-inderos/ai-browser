@@ -24,6 +24,26 @@ A modern web browser with AI-powered features built with Electron.
    
    Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
 
+## Security
+
+- Never commit secrets: `.env` is already in `.gitignore`. Use `.env.example` as a template.
+- If a key is ever leaked (e.g., accidentally committed):
+  1. Immediately rotate the key in the OpenAI dashboard.
+  2. Remove any committed secret files from the repo history.
+     - Preferred (if available): `git filter-repo --path .env --invert-paths`
+     - Fallback:
+       ```bash
+       git rm -f --cached .env
+       git commit -m "chore(security): remove leaked .env"
+       git filter-branch --force --index-filter \
+         'git rm --cached --ignore-unmatch .env' \
+         --prune-empty --tag-name-filter cat -- --all
+       # Then force push the rewritten history
+       git push --force --all
+       git push --force --tags
+       ```
+  3. Invalidate any cached artifacts where the secret could persist (e.g., Git hosting mirrors/archives).
+
 3. **Start the application**:
    ```bash
    npm start
