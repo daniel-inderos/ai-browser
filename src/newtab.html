@@ -156,10 +156,42 @@
         @media (prefers-reduced-motion: reduce) {
             .container, .main-wrapper, #askWrapper, .mode-toggle, .logo { transition: none !important; }
         }
+
+        /* AI Groups floating badge */
+        .ai-groups-badge {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 120;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-full);
+            background: var(--color-surface-elevated);
+            color: var(--color-text-secondary);
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+        }
+        .ai-groups-badge:hover { background: var(--color-surface-hover); }
+        .ai-groups-badge .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--color-text-tertiary);
+            box-shadow: inset 0 0 0 2px var(--color-surface);
+        }
+        .ai-groups-badge.enabled .status-dot { background: #22c55e; }
+        .ai-groups-badge .label { font-size: 12px; }
+        .ai-groups-badge .hotkey { opacity: .6; font-size: 11px; }
+        body.is-ask-expanded .ai-groups-badge { position: fixed; }
     </style>
 </head>
 <body>
     <div class="container">
+        <button id="aiGroupsBadge" class="ai-groups-badge" title="Toggle AI Tab Groups" aria-pressed="false">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span class="label">AI Groups Off</span>
+        </button>
         <div class="main-wrapper" id="mainWrapper">
             <div class="logo">AI Browser</div>
             <div class="mode-toggle" id="modeToggle">
@@ -167,7 +199,8 @@
                 <button id="modeAsk" class="mode-btn">Ask</button>
             </div>
 
-            <button id="enableGroupingBtn" class="mode-btn">Enable AI Tab Groups</button>
+            <!-- Legacy button retained (hidden) for fallback -->
+            <button id="enableGroupingBtn" class="mode-btn" style="display:none;">Enable AI Tab Groups</button>
 
             <!-- Search Mode UI -->
             <div id="searchWrapper">
@@ -226,10 +259,13 @@
                     searchInput: document.getElementById('searchInput'),
                     searchForm: document.getElementById('searchForm'),
                     enableGroupingBtn: document.getElementById('enableGroupingBtn'),
+                    aiGroupsBadge: document.getElementById('aiGroupsBadge'),
                 };
                 this.mode = 'search';
                 this.askManager = null;
+                this.aiGroupingEnabled = false;
                 this.setupEventListeners();
+                this.requestGroupingStatus();
             }
 
             setupEventListeners() {
@@ -239,12 +275,17 @@
                     e.preventDefault();
                     this.handleSearch();
                 });
-                this.elements.enableGroupingBtn.addEventListener('click', () => {
-                    if (window.electronAPI && window.electronAPI.sendToHost) {
-                        window.electronAPI.sendToHost('enable-grouping', {});
-                    }
-                    this.elements.enableGroupingBtn.disabled = true;
-                });
+                if (this.elements.enableGroupingBtn) {
+                    this.elements.enableGroupingBtn.addEventListener('click', () => {
+                        if (window.electronAPI && window.electronAPI.sendToHost) {
+                            window.electronAPI.sendToHost('enable-grouping', {});
+                        }
+                    });
+                }
+
+                if (this.elements.aiGroupsBadge) {
+                    this.elements.aiGroupsBadge.addEventListener('click', () => this.toggleGrouping());
+                }
 
                 // Forward common browser shortcuts to host so they work immediately
                 window.addEventListener('keydown', (e) => {
@@ -275,6 +316,45 @@
                             break;
                     }
                 });
+
+                // Listen for host messages (grouping status)
+                window.addEventListener('message', (e) => this.handleHostMessage(e));
+                if (window.electronAPI && window.electronAPI.onFromHost) {
+                    window.electronAPI.onFromHost((data) => this.handleHostMessage({ data }));
+                }
+            }
+
+            requestGroupingStatus() {
+                if (window.electronAPI && window.electronAPI.sendToHost) {
+                    window.electronAPI.sendToHost('request-grouping-status', {});
+                }
+            }
+
+            setGroupingEnabled(enabled) {
+                this.aiGroupingEnabled = !!enabled;
+                const badge = this.elements.aiGroupsBadge;
+                if (!badge) return;
+                badge.classList.toggle('enabled', this.aiGroupingEnabled);
+                badge.setAttribute('aria-pressed', String(this.aiGroupingEnabled));
+                const label = badge.querySelector('.label');
+                if (label) label.textContent = this.aiGroupingEnabled ? 'AI Groups On' : 'AI Groups Off';
+            }
+
+            toggleGrouping() {
+                if (window.electronAPI && window.electronAPI.sendToHost) {
+                    const enable = !this.aiGroupingEnabled;
+                    const type = enable ? 'enable-grouping' : 'disable-grouping';
+                    window.electronAPI.sendToHost(type, {});
+                    // Optimistically reflect UI state
+                    this.setGroupingEnabled(enable);
+                }
+            }
+
+            handleHostMessage({ data }) {
+                if (!data || !data.type) return;
+                if (data.type === 'grouping-status') {
+                    this.setGroupingEnabled(!!data.enabled);
+                }
             }
 
             sendShortcut(command) {
@@ -369,6 +449,7 @@
                     case 'chat-stream-response':
                         this.handleStreamResponse(data);
                         break;
+                    // grouping-status is handled by NewTabManager
                 }
             }
 
