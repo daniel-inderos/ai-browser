@@ -22,5 +22,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Remove listeners
   removeListener: (channel, callback) => ipcRenderer.removeListener(channel, callback),
-  removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
+  removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
+
+  // Host messaging for webview guests
+  sendToHost: (type, payload) => ipcRenderer.sendToHost(type, payload),
+  onFromHost: (callback) => ipcRenderer.on('guest-message', (_e, data) => callback(data))
 });

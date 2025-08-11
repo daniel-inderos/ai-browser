@@ -190,15 +190,19 @@
 
                     // Handle tab context requests from newtab.html
                     if (e.data.type === 'request-tabs') {
-                        const sourceWebview = this.tabs.find(tab => tab.webview.contentWindow === e.source);
+                        // Try to find sender by contentWindow; if not found, fall back to active newtab
+                        let sourceWebview = this.tabs.find(tab => tab.webview && tab.webview.contentWindow === e.source);
+                        if (!sourceWebview) {
+                            sourceWebview = this.tabs.find(tab => tab.id === this.activeTabId && tab.url && tab.url.includes('newtab.html'));
+                        }
                         if (sourceWebview) {
                             const tabData = this.tabs
                                 .filter(t => t.id !== sourceWebview.id && !t.url.includes('newtab.html'))
                                 .map(t => ({ id: t.id, title: t.title, url: t.url }));
-                            
-                                                    // Use the webview's postMessage API to communicate with the guest page
+
                         try {
-                            sourceWebview.webview.postMessage({ type: 'tabs-response', tabs: tabData }, '*');
+                            // Send message to guest via IPC channel bridged by preload
+                            sourceWebview.webview.send('guest-message', { type: 'tabs-response', tabs: tabData });
                         } catch (err) {
                             console.error('Failed to send tabs response:', err);
                         }
@@ -247,42 +251,19 @@
 
                 console.log('Sending chat request with contexts:', contexts.length);
                 console.log('Sending to electronAPI.sendChat');
-                try {
-                    await window.electronAPI.sendChat(reqId, session, contexts);
-                } catch (error) {
-                    console.error('Error sending chat request:', error);
-                    // Send error back to newtab
-                    sourceTab.webview.postMessage({ 
-                        type: 'chat-stream-response', 
-                        id: reqId, 
-                        error: error.message 
-                    }, '*');
-                    return;
-                }
-
                 const streamHandler = (streamData) => {
                     console.log('Received stream data:', streamData);
                     console.log('Stream handler called with:', streamData);
                     // Only handle responses for this request and forward to the source webview
                     if (streamData.id === reqId) {
-                        // Forward streamed chat data to the webview using executeJavaScript
-                        console.log('Sending stream data to webview:', { type: 'chat-stream-response', ...streamData });
-                        console.log('Attempting to send to webview via executeJavaScript');
-                        const messageData = JSON.stringify({ type: 'chat-stream-response', ...streamData });
-                        sourceTab.webview.executeJavaScript(`
-                            window.dispatchEvent(new MessageEvent('message', {
-                                data: ${messageData},
-                                origin: '*'
-                            }));
-                        `).catch(err => {
-                            console.error('Failed to send message to webview:', err);
-                            // Fallback: try postMessage if executeJavaScript fails
-                            try {
-                                sourceTab.webview.postMessage({ type: 'chat-stream-response', ...streamData }, '*');
-                            } catch (fallbackErr) {
-                                console.error('Fallback postMessage also failed:', fallbackErr);
-                            }
-                        });
+                        // Forward streamed chat data to the webview
+                        try {
+                            const payload = { type: 'chat-stream-response', ...streamData };
+                            console.log('Forwarding stream to webview via send(channel):', payload);
+                            sourceTab.webview.send('guest-message', payload);
+                        } catch (err) {
+                            console.error('Failed to send message to webview via send:', err);
+                        }
                         
                         if (streamData.done || streamData.error) {
                             // Clean up listener after completion or error
@@ -292,9 +273,22 @@
                     }
                 };
 
-                // Ensure we don't have duplicate listeners
+                // Ensure we don't have duplicate listeners; add before sending to avoid race
                 console.log('Adding chat-stream listener');
                 window.electronAPI.onChatStream(streamHandler);
+
+                try {
+                    // Fire and forget so we don't miss early tokens
+                    window.electronAPI.sendChat(reqId, session, contexts);
+                } catch (error) {
+                    console.error('Error sending chat request:', error);
+                    // Send error back to newtab immediately
+                    try {
+                        sourceTab.webview.send('guest-message', { type: 'chat-stream-response', id: reqId, error: error.message });
+                    } catch (e2) {
+                        console.error('Failed to send error to guest:', e2);
+                    }
+                }
             }
 
             setupEventListeners() {
@@ -554,6 +548,48 @@
                         }
                     } catch (error) {
                         console.error('Error in dom-ready handler:', error);
+                    }
+                });
+
+                // Handle messages coming from newtab.html via ipcRenderer.sendToHost
+                webview.addEventListener('ipc-message', (event) => {
+                    try {
+                        if (!event || !event.channel) return;
+                        const channel = event.channel;
+                        const arg = (event.args && event.args[0]) || {};
+                        if (channel === 'request-tabs') {
+                            const tabData = this.tabs
+                                .filter(t => t.id !== tab.id && !t.url.includes('newtab.html'))
+                                .map(t => ({ id: t.id, title: t.title, url: t.url }));
+                            try {
+                                webview.send('guest-message', { type: 'tabs-response', tabs: tabData });
+                            } catch (err) {
+                                console.error('Failed to send tabs response (ipc):', err);
+                            }
+                        }
+                        if (channel === 'new-tab-chat-send') {
+                            const data = { type: 'new-tab-chat-send', ...arg };
+                            this.handleNewTabChat(data, tab);
+                        }
+                        if (channel === 'shortcut') {
+                            switch (arg.command) {
+                                case 'close-tab':
+                                    this.closeTab(tab.id);
+                                    break;
+                                case 'new-tab':
+                                    this.createTab();
+                                    break;
+                                case 'focus-url':
+                                    if (this.urlBarContainer.style.display !== 'none') {
+                                        this.urlBar.focus();
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('ipc-message handler error:', e);
                     }
                 });
 
