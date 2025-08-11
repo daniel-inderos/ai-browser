@@ -241,6 +241,25 @@ const createMenu = () => {
               mainWindow.webContents.send('refresh-page');
             }
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Focus Address Bar',
+          accelerator: 'CmdOrCtrl+L',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('focus-url');
+            }
+          }
+        },
+        {
+          label: 'Toggle AI Chat',
+          accelerator: 'CmdOrCtrl+E',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('toggle-chat');
+            }
+          }
         }
       ]
     }

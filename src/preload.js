@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onNavigateBack: (callback) => ipcRenderer.on('navigate-back', callback),
   onNavigateForward: (callback) => ipcRenderer.on('navigate-forward', callback),
   onRefreshPage: (callback) => ipcRenderer.on('refresh-page', callback),
+  onFocusUrl: (callback) => ipcRenderer.on('focus-url', callback),
+  onToggleChat: (callback) => ipcRenderer.on('toggle-chat', callback),
 
   // Remove listeners
   removeListener: (channel, callback) => ipcRenderer.removeListener(channel, callback),

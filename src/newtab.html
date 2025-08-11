@@ -236,6 +236,42 @@
                     e.preventDefault();
                     this.handleSearch();
                 });
+
+                // Forward common browser shortcuts to host so they work immediately
+                window.addEventListener('keydown', (e) => {
+                    if (!(e.metaKey || e.ctrlKey)) return;
+                    const k = e.key.toLowerCase();
+                    switch (k) {
+                        case 't': // New tab
+                            e.preventDefault();
+                            this.sendShortcut('new-tab');
+                            break;
+                        case 'w': // Close tab
+                            e.preventDefault();
+                            this.sendShortcut('close-tab');
+                            break;
+                        case 'r': // Refresh
+                            e.preventDefault();
+                            this.sendShortcut('refresh-page');
+                            break;
+                        case 'l': // Focus URL bar in host
+                            e.preventDefault();
+                            this.sendShortcut('focus-url');
+                            break;
+                        case 'e': // Toggle chat sidebar in host
+                            e.preventDefault();
+                            this.sendShortcut('toggle-chat');
+                            break;
+                        default:
+                            break;
+                    }
+                });
+            }
+
+            sendShortcut(command) {
+                if (window.electronAPI && window.electronAPI.sendToHost) {
+                    window.electronAPI.sendToHost('shortcut', { command });
+                }
             }
 
             switchMode(newMode) {

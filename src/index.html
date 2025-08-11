@@ -347,6 +347,13 @@
                 window.electronAPI.onNavigateBack(() => this.navigateBack());
                 window.electronAPI.onNavigateForward(() => this.navigateForward());
                 window.electronAPI.onRefreshPage(() => this.refreshPage());
+                // Global accelerators that must work when webview is focused
+                window.electronAPI.onFocusUrl(() => {
+                    if (this.urlBarContainer && this.urlBarContainer.style.display !== 'none') {
+                        this.urlBar.focus();
+                    }
+                });
+                window.electronAPI.onToggleChat(() => this.toggleChatSidebar());
 
                 // Window resize handling
                 window.addEventListener('resize', this.debounce(() => {
@@ -583,6 +590,12 @@
                                     if (this.urlBarContainer.style.display !== 'none') {
                                         this.urlBar.focus();
                                     }
+                                    break;
+                                case 'refresh-page':
+                                    this.refreshPage();
+                                    break;
+                                case 'toggle-chat':
+                                    this.toggleChatSidebar();
                                     break;
                                 default:
                                     break;
