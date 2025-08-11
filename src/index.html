@@ -354,6 +354,8 @@
                     }
                 });
                 window.electronAPI.onToggleChat(() => this.toggleChatSidebar());
+                // Tab numeric selection from menu accelerators
+                window.electronAPI.onSelectTab(({ index }) => this.selectTabByNumber(index));
 
                 // Window resize handling
                 window.addEventListener('resize', this.debounce(() => {
@@ -386,9 +388,27 @@
                                 e.preventDefault();
                                 this.toggleChatSidebar();
                                 break;
+                            default: {
+                                // Number keys 1-9 to switch tabs like Chrome
+                                if (/^[1-9]$/.test(e.key)) {
+                                    e.preventDefault();
+                                    this.selectTabByNumber(parseInt(e.key, 10));
+                                }
+                                break;
+                            }
                         }
                     }
                 });
+            }
+
+            selectTabByNumber(n) {
+                if (!this.tabs.length) return;
+                // Chrome behavior: 1-8 go to that index; 9 goes to last tab
+                let targetIndex = n === 9 ? this.tabs.length - 1 : n - 1;
+                if (targetIndex < 0) targetIndex = 0;
+                if (targetIndex >= this.tabs.length) return; // Ignore if beyond tab count (except 9 handled above)
+                const targetTab = this.tabs[targetIndex];
+                if (targetTab) this.switchToTab(targetTab.id);
             }
 
             debounce(func, wait) {

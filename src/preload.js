@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onRefreshPage: (callback) => ipcRenderer.on('refresh-page', callback),
   onFocusUrl: (callback) => ipcRenderer.on('focus-url', callback),
   onToggleChat: (callback) => ipcRenderer.on('toggle-chat', callback),
+  onSelectTab: (callback) => ipcRenderer.on('select-tab', (_e, data) => callback(data)),
 
   // Remove listeners
   removeListener: (channel, callback) => ipcRenderer.removeListener(channel, callback),
