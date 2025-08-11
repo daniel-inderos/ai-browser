@@ -69,6 +69,16 @@
                         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                     </svg>
                 </button>
+                <button class="summarize-btn" id="summarizeBtn" title="Summarize Page" aria-label="Summarize current page">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="21" y1="6" x2="8" y2="6" />
+                        <line x1="21" y1="12" x2="8" y2="12" />
+                        <line x1="21" y1="18" x2="8" y2="18" />
+                        <line x1="3" y1="6" x2="3" y2="6" />
+                        <line x1="3" y1="12" x2="3" y2="12" />
+                        <line x1="3" y1="18" x2="3" y2="18" />
+                    </svg>
+                </button>
             </div>
         </nav>
 
@@ -157,6 +167,7 @@
                 this.navBar = document.querySelector('.nav-bar');
                 this.urlBarContainer = document.querySelector('.url-bar-container');
                 this.chatBtn = document.getElementById('chatBtn');
+                this.summarizeBtn = document.getElementById('summarizeBtn');
                 this.chatSidebar = document.getElementById('chatSidebar');
                 this.chatInput = document.getElementById('chatInput');
                 this.chatInputForm = document.getElementById('chatInputForm');
@@ -324,6 +335,11 @@
                 // Chat button
                 if (this.chatBtn) {
                     this.chatBtn.addEventListener('click', () => this.toggleChatSidebar());
+                }
+
+                // Summarize button
+                if (this.summarizeBtn) {
+                    this.summarizeBtn.addEventListener('click', () => this.handleSummarizePage());
                 }
 
                 // Chat form submission
@@ -942,6 +958,70 @@
                     }
                 };
             
+                window.electronAPI.onChatStream(streamHandler);
+            }
+
+            async handleSummarizePage() {
+                const tabId = this.activeTabId;
+                const activeTab = this.tabs.find(t => t.id === tabId);
+                if (!activeTab || activeTab.url.includes('newtab.html')) {
+                    return;
+                }
+
+                this.showChatSidebar();
+
+                const session = this.chatSessions.get(tabId) || [];
+                session.push({ role: 'user', content: 'Summarize this page.' });
+
+                const assistantMessage = { role: 'assistant', content: '' };
+                session.push(assistantMessage);
+                const assistantMessageIndex = session.length - 1;
+
+                this.renderChatHistory();
+                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+
+                const contexts = [];
+                try {
+                    const context = await this.getPageContext(activeTab);
+                    if (context) contexts.push(context);
+                } catch (err) {
+                    console.error('Failed to get page context for summarization:', err);
+                }
+
+                const reqId = Date.now().toString();
+                window.electronAPI.sendChat(reqId, session.slice(0, -1), contexts);
+
+                const streamHandler = (data) => {
+                    if (data.id !== reqId) return;
+
+                    if (data.token) {
+                        assistantMessage.content += data.token;
+                        if (this.activeTabId === tabId) {
+                            const msgContainer = document.getElementById(`asst-msg-${tabId}-${assistantMessageIndex}`);
+                            if (msgContainer) {
+                                const contentEl = msgContainer.querySelector('.chat-content');
+                                contentEl.textContent = assistantMessage.content;
+                                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+                            }
+                        }
+                    } else if (data.done) {
+                        if (this.activeTabId === tabId) {
+                            const msgContainer = document.getElementById(`asst-msg-${tabId}-${assistantMessageIndex}`);
+                            if (msgContainer) {
+                                const contentEl = msgContainer.querySelector('.chat-content');
+                                contentEl.innerHTML = this.marked.parse(assistantMessage.content);
+                            }
+                        }
+                        window.electronAPI.removeListener('chat-stream', streamHandler);
+                    } else if (data.error) {
+                        assistantMessage.content = `Error: ${data.error}`;
+                        if (this.activeTabId === tabId) {
+                            this.renderChatHistory();
+                        }
+                        window.electronAPI.removeListener('chat-stream', streamHandler);
+                    }
+                };
+
                 window.electronAPI.onChatStream(streamHandler);
             }
 
