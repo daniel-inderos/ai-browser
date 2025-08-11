@@ -149,6 +149,9 @@
                 this.setupKeyboardShortcuts();
                 this.chatSessions = new Map();
                 this.marked = window.marked;
+                this.aiGroupingEnabled = false;
+                this.tabGroups = [];
+                this.tabGroupCollapsed = new Map();
             }
 
             initializeElements() {
@@ -469,6 +472,8 @@
                     isLoading: false,
                     chatSidebarOpen: false, // Track chat sidebar state per tab
                     referencedTabs: new Set(), // Store IDs of all context tabs
+                    summary: null,
+                    groupId: null,
                 };
 
                 // Create enhanced tab UI with better accessibility
@@ -637,6 +642,29 @@
                                     break;
                             }
                         }
+                        if (channel === 'enable-grouping') {
+                            this.aiGroupingEnabled = true;
+                            this.tabs.forEach(t => {
+                                if (!t.url.includes('newtab.html')) {
+                                    this.summarizeTab(t);
+                                }
+                            });
+                            // Notify all newtab pages
+                            this.broadcastGroupingStatus();
+                        }
+                        if (channel === 'disable-grouping') {
+                            this.aiGroupingEnabled = false;
+                            this.renderTabsPlain();
+                            // Notify all newtab pages
+                            this.broadcastGroupingStatus();
+                        }
+                        if (channel === 'request-grouping-status') {
+                            try {
+                                webview.send('guest-message', { type: 'grouping-status', enabled: this.aiGroupingEnabled });
+                            } catch (err) {
+                                console.error('Failed to send grouping-status to requester:', err);
+                            }
+                        }
                     } catch (e) {
                         console.error('ipc-message handler error:', e);
                     }
@@ -707,6 +735,9 @@
                     }
                     if (this.activeTabId === tabId) {
                         this.hideLoading();
+                    }
+                    if (this.aiGroupingEnabled && !tab.url.includes('newtab.html')) {
+                        this.summarizeTab(tab);
                     }
                 });
 
@@ -827,6 +858,9 @@
                         // No tabs left, create a new one
                         this.createTab();
                     }
+                }
+                if (this.aiGroupingEnabled) {
+                    this.clusterTabs();
                 }
             }
 
@@ -1047,6 +1081,162 @@
                     console.error(`Could not get page context: `, e);
                     return null;
                 }
+            }
+
+            async summarizeTab(tab) {
+                try {
+                    const context = await this.getPageContext(tab);
+                    if (!context) return;
+                    const result = await window.electronAPI.summarizePage(tab.id, context);
+                    if (result && result.summary) {
+                        tab.summary = result.summary.trim();
+                        this.clusterTabs();
+                    }
+                } catch (e) {
+                    console.error('Failed to summarize tab:', e);
+                }
+            }
+
+            clusterTabs() {
+                if (!this.aiGroupingEnabled) return;
+                const threshold = 0.3;
+                const tokens = (str) => new Set(str.toLowerCase().split(/\W+/).filter(Boolean));
+                const groups = [];
+                const tabsWithSummary = this.tabs.filter(t => t.summary);
+                tabsWithSummary.forEach(tab => {
+                    const set = tokens(tab.summary);
+                    let matched = null;
+                    groups.forEach(g => {
+                        if (matched) return;
+                        const inter = new Set([...set].filter(x => g.tokens.has(x)));
+                        const union = new Set([...set, ...g.tokens]);
+                        const sim = inter.size / union.size;
+                        if (sim >= threshold) matched = g;
+                    });
+                    if (matched) {
+                        matched.tabs.push(tab);
+                        matched.tokens = new Set([...matched.tokens, ...set]);
+                        tab.groupId = matched.id;
+                    } else {
+                        const groupId = `group-${groups.length + 1}`;
+                        groups.push({ id: groupId, name: tab.summary.split(' ').slice(0, 3).join(' '), tokens: set, tabs: [tab] });
+                        tab.groupId = groupId;
+                    }
+                });
+                this.tabGroups = groups.map((g, idx) => ({ ...g, color: this.pickGroupColor(idx) }));
+                this.renderTabGroups();
+            }
+
+            renderTabGroups() {
+                if (!this.aiGroupingEnabled) return;
+                this.tabsContainer.innerHTML = '';
+                if (!this.tabGroups || this.tabGroups.length === 0) {
+                    this.tabs.forEach(t => this.tabsContainer.appendChild(t.tabElement));
+                    return;
+                }
+
+                // Render groups as containers
+                this.tabGroups.forEach((group, idx) => {
+                    const collapsed = this.tabGroupCollapsed.get(group.id) || false;
+                    const groupEl = document.createElement('div');
+                    groupEl.className = `tab-group${collapsed ? ' collapsed' : ''}`;
+                    groupEl.style.setProperty('--group-color', group.color);
+                    groupEl.style.setProperty('--group-color-soft', this.softColor(group.color));
+
+                    const label = document.createElement('button');
+                    label.type = 'button';
+                    label.className = 'tab-group-label';
+                    label.setAttribute('aria-expanded', String(!collapsed));
+                    label.innerHTML = `
+                        <span class="chevron">▾</span>
+                        <span class="name">${this.escapeHtml(group.name)}</span>
+                        <span class="tab-group-count" title="Tabs in group">${group.tabs.length}</span>
+                    `;
+                    label.addEventListener('click', () => {
+                        const isCollapsed = this.tabGroupCollapsed.get(group.id) || false;
+                        this.tabGroupCollapsed.set(group.id, !isCollapsed);
+                        this.renderTabGroups();
+                    });
+
+                    const tabsWrap = document.createElement('div');
+                    tabsWrap.className = 'tab-group-tabs';
+                    group.tabs.forEach(t => tabsWrap.appendChild(t.tabElement));
+
+                    groupEl.appendChild(label);
+                    groupEl.appendChild(tabsWrap);
+                    this.tabsContainer.appendChild(groupEl);
+                });
+
+                // Ungrouped fallback
+                const groupedIds = new Set();
+                this.tabGroups.forEach(g => g.tabs.forEach(t => groupedIds.add(t.id)));
+                const ungrouped = this.tabs.filter(t => !groupedIds.has(t.id));
+                if (ungrouped.length) {
+                    const groupEl = document.createElement('div');
+                    groupEl.className = 'tab-group ungrouped';
+                    groupEl.style.setProperty('--group-color', '#999');
+                    groupEl.style.setProperty('--group-color-soft', this.softColor('#999'));
+                    const label = document.createElement('div');
+                    label.className = 'tab-group-label';
+                    label.innerHTML = `
+                        <span class="chevron" style="visibility:hidden">▾</span>
+                        <span class="name">Other</span>
+                        <span class="tab-group-count" title="Tabs in group">${ungrouped.length}</span>
+                    `;
+                    const tabsWrap = document.createElement('div');
+                    tabsWrap.className = 'tab-group-tabs';
+                    ungrouped.forEach(t => tabsWrap.appendChild(t.tabElement));
+                    groupEl.appendChild(label);
+                    groupEl.appendChild(tabsWrap);
+                    this.tabsContainer.appendChild(groupEl);
+                }
+            }
+
+            renderTabsPlain() {
+                // Restore default flat tab rendering
+                this.tabsContainer.innerHTML = '';
+                this.tabs.forEach(t => this.tabsContainer.appendChild(t.tabElement));
+            }
+
+            pickGroupColor(index) {
+                const palette = [
+                    '#3b82f6', // blue-500
+                    '#22c55e', // green-500
+                    '#ef4444', // red-500
+                    '#f59e0b', // amber-500
+                    '#a855f7', // purple-500
+                    '#06b6d4', // cyan-500
+                    '#f97316', // orange-500
+                    '#84cc16', // lime-500
+                ];
+                return palette[index % palette.length];
+            }
+
+            softColor(hex) {
+                // Very naive soft background from a solid color
+                // Converts hex to rgba with low alpha
+                try {
+                    const c = hex.replace('#','');
+                    const r = parseInt(c.substring(0,2),16);
+                    const g = parseInt(c.substring(2,4),16);
+                    const b = parseInt(c.substring(4,6),16);
+                    return `rgba(${r}, ${g}, ${b}, 0.12)`;
+                } catch (_) {
+                    return 'rgba(127,127,127,0.12)';
+                }
+            }
+
+            broadcastGroupingStatus() {
+                // Inform every newtab.html webview of current status
+                this.tabs.forEach(t => {
+                    if (t.webview && t.url && t.url.includes('newtab.html')) {
+                        try {
+                            t.webview.send('guest-message', { type: 'grouping-status', enabled: this.aiGroupingEnabled });
+                        } catch (err) {
+                            console.error('Failed to broadcast grouping-status:', err);
+                        }
+                    }
+                });
             }
 
             toggleChatSidebar() {

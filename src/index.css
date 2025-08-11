@@ -990,3 +990,90 @@ webview {
     font-size: inherit;
     border-radius: 0;
 }
+
+.tab-group-header {
+    padding: 0 8px;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+}
+
+#enableGroupingBtn {
+    margin-bottom: 1rem;
+}
+
+/* Tab Groups UI - Enhanced */
+.tab-group {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2);
+    margin: 0 var(--spacing-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    -webkit-app-region: no-drag;
+}
+
+.tab-group::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    bottom: -1px;
+    width: 4px;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    background: var(--group-color, var(--color-primary));
+}
+
+.tab-group-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: var(--group-color-soft, var(--color-surface-elevated));
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+}
+
+.tab-group-label .chevron {
+    display: inline-block;
+    transition: transform var(--transition-fast);
+}
+
+.tab-group.collapsed .tab-group-label .chevron {
+    transform: rotate(-90deg);
+}
+
+.tab-group-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+}
+
+.tab-group-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+.tab-group.collapsed .tab-group-tabs { display: none; }
+
+.tab-group.ungrouped {
+    --group-color: var(--color-border-focus);
+    --group-color-soft: rgba(127,127,127,0.12);
+}

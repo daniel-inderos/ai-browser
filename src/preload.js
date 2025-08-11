@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // AI Chat
   sendChat: (id, messages, contexts) => ipcRenderer.invoke('chat-send', { id, messages, contexts }),
   onChatStream: (callback) => ipcRenderer.on('chat-stream', (_e, data) => callback(data)),
+  summarizePage: (id, context) => ipcRenderer.invoke('summarize-page', { id, context }),
 
   // Navigation events
   onNewTab: (callback) => ipcRenderer.on('new-tab', callback),
