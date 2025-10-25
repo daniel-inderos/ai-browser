@@ -11,43 +11,34 @@
 </head>
 <body>
     <div class="browser-container" role="application" aria-label="AI Browser">
-        <!-- Tab Bar -->
-        <div class="tab-bar" role="tablist" aria-label="Browser tabs">
-            <div class="tabs-container" id="tabsContainer">
-                <!-- Tabs will be dynamically added here -->
+        <!-- Left Tab Rail -->
+        <aside class="tab-rail" aria-label="Tab Sidebar">
+            <div class="tab-rail-header">
+                <div style="font-weight:600; font-size:12px; color: var(--color-text-tertiary);">Tabs</div>
             </div>
-            <button class="new-tab-btn" id="newTabBtn" title="New Tab (⌘T)" aria-label="Open new tab">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 4v16M20 12H4" />
-                </svg>
-            </button>
-        </div>
-
-        <!-- Navigation Bar -->
-        <nav class="nav-bar" role="navigation" aria-label="Browser navigation">
-            <div class="nav-controls" role="group" aria-label="Navigation controls">
-                <button class="nav-btn" id="backBtn" title="Go back (⌘←)" aria-label="Navigate back">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 12H5" />
-                        <path d="M12 5l-7 7 7 7" />
-                    </svg>
-                </button>
-                <button class="nav-btn" id="forwardBtn" title="Go forward (⌘→)" aria-label="Navigate forward">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12h14" />
-                        <path d="M12 5l7 7-7 7" />
-                    </svg>
-                </button>
-                <button class="nav-btn" id="refreshBtn" title="Refresh page (⌘R)" aria-label="Refresh current page">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="23 4 23 10 17 10" />
-                        <polyline points="1 20 1 14 7 14" />
-                        <path d="M3.51 9a9 9 0 0114.13-3.36L23 10" />
-                        <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14" />
-                    </svg>
-                </button>
-            </div>
-            <div class="url-bar-container">
+            <div class="rail-url">
+                <div class="rail-url-controls">
+                    <button class="nav-btn" id="backBtn" title="Go back (⌘←)" aria-label="Navigate back">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5" />
+                            <path d="M12 5l-7 7 7 7" />
+                        </svg>
+                    </button>
+                    <button class="nav-btn" id="forwardBtn" title="Go forward (⌘→)" aria-label="Navigate forward">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14" />
+                            <path d="M12 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                    <button class="nav-btn" id="refreshBtn" title="Refresh page (⌘R)" aria-label="Refresh current page">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0114.13-3.36L23 10" />
+                            <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14" />
+                        </svg>
+                    </button>
+                </div>
                 <div class="url-input-wrapper">
                     <input type="url" 
                            class="url-bar" 
@@ -58,29 +49,44 @@
                            spellcheck="false">
                     <div class="url-suggestions" id="urlSuggestions" role="listbox" aria-label="URL suggestions"></div>
                 </div>
-                <button class="go-btn" id="goBtn" title="Navigate to URL" aria-label="Go to entered URL">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="6" y1="12" x2="18" y2="12" />
-                        <polyline points="13 7 18 12 13 17" />
-                    </svg>
-                </button>
-                <button class="chat-btn" id="chatBtn" title="AI Chat (⌘E)" aria-label="Open AI Chat">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                    </svg>
-                </button>
-                <button class="summarize-btn" id="summarizeBtn" title="Summarize Page" aria-label="Summarize current page">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="21" y1="6" x2="8" y2="6" />
-                        <line x1="21" y1="12" x2="8" y2="12" />
-                        <line x1="21" y1="18" x2="8" y2="18" />
-                        <line x1="3" y1="6" x2="3" y2="6" />
-                        <line x1="3" y1="12" x2="3" y2="12" />
-                        <line x1="3" y1="18" x2="3" y2="18" />
-                    </svg>
-                </button>
+                <div class="rail-url-actions">
+                    <button class="go-btn" id="goBtn" title="Go" aria-label="Go">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="6" y1="12" x2="18" y2="12" />
+                            <polyline points="13 7 18 12 13 17" />
+                        </svg>
+                    </button>
+                    <button class="chat-btn" id="chatBtn" title="AI Chat (⌘E)" aria-label="Open AI Chat">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                        </svg>
+                    </button>
+                    <button class="summarize-btn" id="summarizeBtn" title="Summarize Page" aria-label="Summarize current page">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="21" y1="6" x2="8" y2="6" />
+                            <line x1="21" y1="12" x2="8" y2="12" />
+                            <line x1="21" y1="18" x2="8" y2="18" />
+                            <line x1="3" y1="6" x2="3" y2="6" />
+                            <line x1="3" y1="12" x2="3" y2="12" />
+                            <line x1="3" y1="18" x2="3" y2="18" />
+                        </svg>
+                    </button>
+                </div>
             </div>
-        </nav>
+            <button class="rail-new-tab-pill" id="railNewTabBtn" title="New Tab (⌘T)" aria-label="Open new tab">
+                <span class="plus">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 4v16M20 12H4" />
+                    </svg>
+                </span>
+                <span style="font-weight:600;">New Tab</span>
+            </button>
+            <div class="tab-rail-tabs" id="tabRailTabs" role="listbox" aria-label="Open Tabs"></div>
+        </aside>
+        <!-- Hidden top tab bar kept only as logical container for existing code -->
+        <div class="tab-bar" role="tablist" aria-label="Browser tabs" style="display:none">
+            <div class="tabs-container" id="tabsContainer"></div>
+        </div>
 
         <!-- AI Chat Sidebar -->
         <aside class="chat-sidebar" id="chatSidebar" role="complementary" aria-label="AI Chat Sidebar">
@@ -156,7 +162,9 @@
 
             initializeElements() {
                 this.tabsContainer = document.getElementById('tabsContainer');
-                this.newTabBtn = document.getElementById('newTabBtn');
+                this.newTabBtn = document.getElementById('railNewTabBtn');
+                this.tabRailTabs = document.getElementById('tabRailTabs');
+                this.railNewTabBtn = document.getElementById('railNewTabBtn');
                 this.backBtn = document.getElementById('backBtn');
                 this.forwardBtn = document.getElementById('forwardBtn');
                 this.refreshBtn = document.getElementById('refreshBtn');
@@ -195,7 +203,7 @@
                                 this.createTab();
                                 break;
                             case 'focus-url':
-                                if (this.urlBarContainer.style.display !== 'none') {
+                                if (!this.urlBarContainer || this.urlBarContainer.style.display !== 'none') {
                                     this.urlBar.focus();
                                 }
                                 break;
@@ -361,14 +369,20 @@
                 this.tabSuggestions.addEventListener('click', (e) => this.handleSuggestionClick(e));
 
                 // Electron menu shortcuts
-                window.electronAPI.onNewTab(() => this.createTab());
+                // From menu/global accelerator
+                window.electronAPI.onNewTab(async () => {
+                    const tab = await this.createTab();
+                    if (tab && tab.url && tab.url.includes('newtab.html')) {
+                        this.ensureNewTabFocus(tab);
+                    }
+                });
                 window.electronAPI.onCloseTab(() => this.closeActiveTab());
                 window.electronAPI.onNavigateBack(() => this.navigateBack());
                 window.electronAPI.onNavigateForward(() => this.navigateForward());
                 window.electronAPI.onRefreshPage(() => this.refreshPage());
                 // Global accelerators that must work when webview is focused
                 window.electronAPI.onFocusUrl(() => {
-                    if (this.urlBarContainer && this.urlBarContainer.style.display !== 'none') {
+                    if (!this.urlBarContainer || this.urlBarContainer.style.display !== 'none') {
                         this.urlBar.focus();
                     }
                 });
@@ -389,7 +403,11 @@
                         switch (e.key) {
                             case 't':
                                 e.preventDefault();
-                                this.createTab();
+                                this.createTab().then(tab => {
+                                    if (tab && tab.url && tab.url.includes('newtab.html')) {
+                                        this.ensureNewTabFocus(tab);
+                                    }
+                                });
                                 break;
                             case 'w':
                                 e.preventDefault();
@@ -418,6 +436,27 @@
                         }
                     }
                 });
+            }
+
+            // Try repeatedly to focus and select the new-tab search input
+            ensureNewTabFocus(tabOrId, attempts = 15) {
+                try {
+                    const tab = typeof tabOrId === 'string' ? this.tabs.find(t => t.id === tabOrId) : tabOrId;
+                    if (!tab || !tab.webview) return;
+                    // Only applicable for new tab page
+                    if (!(tab.url && tab.url.includes('newtab.html'))) return;
+                    tab.webview.focus();
+                    const script = '(() => { const el = document.getElementById("searchInput"); if (el) { el.focus(); if (el.select) el.select(); return true; } return false; })()';
+                    tab.webview.executeJavaScript(script).then(ok => {
+                        if (!ok && attempts > 0) {
+                            setTimeout(() => this.ensureNewTabFocus(tab.id, attempts - 1), 100);
+                        }
+                    }).catch(() => {
+                        if (attempts > 0) {
+                            setTimeout(() => this.ensureNewTabFocus(tab.id, attempts - 1), 100);
+                        }
+                    });
+                } catch (_) { /* noop */ }
             }
 
             selectTabByNumber(n) {
@@ -454,8 +493,8 @@
             // Show or hide the navigation bar depending on the active URL
             updateNavBarVisibility(url) {
                 if (!this.urlBarContainer) return;
-                const isNewTabPage = url && url.includes('newtab.html');
-                this.urlBarContainer.style.display = isNewTabPage ? 'none' : 'flex';
+                // URL bar now lives in the sidebar and should stay visible
+                this.urlBarContainer.style.display = 'flex';
             }
 
             async createTab(url = 'newtab.html') {
@@ -474,6 +513,9 @@
                     referencedTabs: new Set(), // Store IDs of all context tabs
                     summary: null,
                     groupId: null,
+                    railElement: null,
+                    railTitle: null,
+                    railFavicon: null,
                 };
 
                 // Create enhanced tab UI with better accessibility
@@ -512,11 +554,14 @@
                                 } catch (err) {}
                             }
                             tabFavicon.src = iconUrl;
+                            if (tab.railFavicon) tab.railFavicon.src = iconUrl;
                         } else {
                             // Use Google favicon service as final fallback
                             try {
                                 const pageOrigin = new URL(webview.getURL()).origin;
-                                tabFavicon.src = `https://www.google.com/s2/favicons?sz=32&domain_url=${encodeURIComponent(pageOrigin)}`;
+                                const fallback = `https://www.google.com/s2/favicons?sz=32&domain_url=${encodeURIComponent(pageOrigin)}`;
+                                tabFavicon.src = fallback;
+                                if (tab.railFavicon) tab.railFavicon.src = fallback;
                             } catch (err) {}
                         }
                     } catch (err) {
@@ -557,6 +602,56 @@
                 
                 this.tabsContainer.appendChild(tabElement);
 
+                // Create matching item in the left rail
+                if (this.tabRailTabs) {
+                    const railElement = document.createElement('div');
+                    railElement.className = 'rail-tab';
+                    railElement.setAttribute('data-tab-id', tabId);
+                    railElement.setAttribute('role', 'option');
+                    railElement.setAttribute('aria-selected', 'false');
+
+                    const railFavicon = document.createElement('img');
+                    railFavicon.className = 'rail-favicon';
+                    railFavicon.alt = '';
+
+                    const railTitle = document.createElement('span');
+                    railTitle.className = 'rail-title';
+                    railTitle.textContent = 'New Tab';
+
+                    const railCloseBtn = document.createElement('button');
+                    railCloseBtn.className = 'rail-close-btn';
+                    railCloseBtn.setAttribute('aria-label', 'Close tab');
+                    railCloseBtn.setAttribute('title', 'Close tab (⌘W)');
+                    railCloseBtn.innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    `;
+                    railCloseBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.closeTab(tabId);
+                    });
+
+                    railElement.appendChild(railFavicon);
+                    railElement.appendChild(railTitle);
+                    railElement.appendChild(railCloseBtn);
+
+                    railElement.addEventListener('click', () => this.switchToTab(tabId));
+                    railElement.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            this.switchToTab(tabId);
+                        }
+                    });
+
+                    this.tabRailTabs.appendChild(railElement);
+
+                    tab.railElement = railElement;
+                    tab.railTitle = railTitle;
+                    tab.railFavicon = railFavicon;
+                }
+
                 // Create webview with enhanced loading states
                 const webview = document.createElement('webview');
                 webview.style.display = 'none';
@@ -581,14 +676,19 @@
                         tab.title = webview.getTitle() || 'New Tab';
                         tabTitle.textContent = tab.title;
                         tabTitle.setAttribute('title', tab.title);
+                        if (tab.railTitle) {
+                            tab.railTitle.textContent = tab.title;
+                            tab.railTitle.setAttribute('title', tab.title);
+                        }
                         if (this.activeTabId === tabId) {
                             this.urlBar.value = webview.getURL();
                             this.hideLoading();
                             if (webview.getURL().includes('newtab.html')) {
                                 webview.focus();
-                                // Delay JavaScript execution to ensure page is fully loaded
+                                // Delay to ensure newtab is fully loaded, then focus + select search input
                                 setTimeout(() => {
-                                    webview.executeJavaScript('document.getElementById("mainInput")?.focus()').catch(err => {
+                                    const script = '(() => { const el = document.getElementById("searchInput"); if (el) { el.focus(); if (el.select) el.select(); } })()';
+                                    webview.executeJavaScript(script).catch(err => {
                                         console.log('Focus script failed (expected during initialization):', err.message);
                                     });
                                 }, 100);
@@ -625,10 +725,14 @@
                                     this.closeTab(tab.id);
                                     break;
                                 case 'new-tab':
-                                    this.createTab();
+                                    this.createTab().then(newTab => {
+                                        if (newTab && newTab.url && newTab.url.includes('newtab.html')) {
+                                            this.ensureNewTabFocus(newTab);
+                                        }
+                                    });
                                     break;
                                 case 'focus-url':
-                                    if (this.urlBarContainer.style.display !== 'none') {
+                                    if (!this.urlBarContainer || this.urlBarContainer.style.display !== 'none') {
                                         this.urlBar.focus();
                                     }
                                     break;
@@ -675,11 +779,16 @@
                     tab.title = newTitle;
                     tabTitle.textContent = newTitle;
                     tabTitle.setAttribute('title', newTitle);
+                    if (tab.railTitle) {
+                        tab.railTitle.textContent = newTitle;
+                        tab.railTitle.setAttribute('title', newTitle);
+                    }
                 });
                 // Add listener to capture page favicon changes
                 webview.addEventListener('page-favicon-updated', async (event) => {
                     if (event.favicons && event.favicons.length > 0) {
                         tabFavicon.src = event.favicons[0];
+                        if (tab.railFavicon) tab.railFavicon.src = event.favicons[0];
                     } else {
                         // If favicon still empty, attempt fallback
                         await updateFaviconFallback();
@@ -690,6 +799,7 @@
                     tab.url = e.url;
                     // Clear favicon when navigating to new main page
                     tabFavicon.src = '';
+                    if (tab.railFavicon) tab.railFavicon.src = '';
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = e.url;
                         this.updateNavBarVisibility(e.url);
@@ -700,6 +810,7 @@
                     tab.url = e.url;
                     // Clear favicon for in-page navigations too (e.g., SPA route changes)
                     tabFavicon.src = '';
+                    if (tab.railFavicon) tab.railFavicon.src = '';
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = e.url;
                         this.updateNavBarVisibility(e.url);
@@ -717,6 +828,7 @@
                 webview.addEventListener('did-start-loading', () => {
                     tab.isLoading = true;
                     tabTitle.textContent = 'Loading...';
+                    if (tab.railTitle) tab.railTitle.textContent = 'Loading...';
                     // Removed favicon reset here to avoid flicker; handled on navigation
                     if (this.activeTabId === tabId) {
                         this.showLoading();
@@ -729,6 +841,10 @@
                     tab.title = finalTitle;
                     tabTitle.textContent = finalTitle;
                     tabTitle.setAttribute('title', finalTitle);
+                    if (tab.railTitle) {
+                        tab.railTitle.textContent = finalTitle;
+                        tab.railTitle.setAttribute('title', finalTitle);
+                    }
                     // If favicon still empty, attempt fallback
                     if (!tabFavicon.src) {
                         await updateFaviconFallback();
@@ -791,6 +907,10 @@
                     tab.webview.style.display = 'none';
                     tab.tabElement.classList.remove('active');
                     tab.tabElement.setAttribute('aria-selected', 'false');
+                    if (tab.railElement) {
+                        tab.railElement.classList.remove('active');
+                        tab.railElement.setAttribute('aria-selected', 'false');
+                    }
                 });
 
                 // Show selected webview and activate tab
@@ -799,6 +919,10 @@
                     tab.webview.style.display = 'flex';
                     tab.tabElement.classList.add('active');
                     tab.tabElement.setAttribute('aria-selected', 'true');
+                    if (tab.railElement) {
+                        tab.railElement.classList.add('active');
+                        tab.railElement.setAttribute('aria-selected', 'true');
+                    }
                     this.activeTabId = tabId;
                     this.urlBar.value = tab.url;
                     this.updateNavBarVisibility(tab.url);
@@ -807,7 +931,8 @@
                         this.hideChatSidebar(true); // Hide and clear for newtab
                         if (tab.webview) {
                             tab.webview.focus();
-                            tab.webview.executeJavaScript('document.getElementById("searchInput")?.focus()').catch(err => {
+                            const script = '(() => { const el = document.getElementById("searchInput"); if (el) { el.focus(); if (el.select) el.select(); } })()';
+                            tab.webview.executeJavaScript(script).catch(err => {
                                 console.log('Focus script failed:', err.message);
                             });
                         }
@@ -821,7 +946,7 @@
                     
                     this.updateChatContextUI(tab);
                     // Focus management
-                    if (this.urlBarContainer.style.display !== 'none') {
+                    if (!this.urlBarContainer || this.urlBarContainer.style.display !== 'none') {
                         this.urlBar.focus();
                     } else if (tab.webview) {
                         tab.webview.focus();
@@ -829,7 +954,8 @@
                     
                     // Guarantee the new-tab search box is focused and selected so shortcuts work without extra clicks
                     if (tab.url && tab.url.includes('newtab.html') && tab.webview) {
-                        tab.webview.executeJavaScript('const i=document.getElementById("mainInput"); if(i){ i.focus(); i.select(); }').catch(err => {
+                        const script = '(() => { const el = document.getElementById("searchInput"); if (el) { el.focus(); if (el.select) el.select(); } })()';
+                        tab.webview.executeJavaScript(script).catch(err => {
                             console.log('Focus script failed:', err.message);
                         });
                     }
@@ -845,6 +971,7 @@
                 // Remove from DOM
                 tab.tabElement.remove();
                 tab.webview.remove();
+                if (tab.railElement) tab.railElement.remove();
                 
                 // Remove from tabs array
                 this.tabs.splice(tabIndex, 1);
@@ -1269,7 +1396,7 @@
                 }
                 
                 this.chatSidebar.classList.add('open');
-                this.contentArea.style.width = `calc(100% - 320px)`;
+                this.contentArea.style.width = `calc(100% - var(--tab-rail-width) - var(--chat-sidebar-width) - var(--spacing-1) - var(--spacing-1))`;
                 this.chatInput.focus();
                 this.renderChatHistory();
                 this.updateChatContextUI(currentTab);
