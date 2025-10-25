@@ -190,6 +190,39 @@ textarea:focus {
     display: flex;
     flex-direction: column;
     z-index: 12;
+    overflow: visible;
+}
+
+.sidebar-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    z-index: 20;
+}
+
+.sidebar-resizer::after {
+    content: '';
+    width: 2px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background: transparent;
+    transition: background var(--transition-fast);
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+.sidebar-resizer.dragging::after {
+    background: var(--color-border);
+}
+
+.tab-rail-resizer {
+    right: -4px;
 }
 
 .tab-rail-header {
@@ -907,6 +940,11 @@ webview {
     display: flex;
     flex-direction: column;
     z-index: 100;
+    overflow: visible;
+}
+
+.chat-sidebar-resizer {
+    left: -4px;
 }
 
 .chat-sidebar.open {

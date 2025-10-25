@@ -82,6 +82,7 @@
                 <span style="font-weight:600;">New Tab</span>
             </button>
             <div class="tab-rail-tabs" id="tabRailTabs" role="listbox" aria-label="Open Tabs"></div>
+            <div class="sidebar-resizer tab-rail-resizer" id="tabRailResizer" role="separator" aria-orientation="vertical" aria-label="Resize tab sidebar" tabindex="0"></div>
         </aside>
         <!-- Hidden top tab bar kept only as logical container for existing code -->
         <div class="tab-bar" role="tablist" aria-label="Browser tabs" style="display:none">
@@ -90,6 +91,7 @@
 
         <!-- AI Chat Sidebar -->
         <aside class="chat-sidebar" id="chatSidebar" role="complementary" aria-label="AI Chat Sidebar">
+            <div class="sidebar-resizer chat-sidebar-resizer" id="chatSidebarResizer" role="separator" aria-orientation="vertical" aria-label="Resize AI chat sidebar" tabindex="0"></div>
             <div class="chat-history" id="chatHistory" tabindex="0" aria-live="polite" aria-atomic="false"></div>
             <div class="chat-input-area">
                 <div id="contextPillsContainer" class="context-pills-container"></div>
@@ -148,8 +150,17 @@
                 this.tabs = [];
                 this.activeTabId = null;
                 this.tabCounter = 0;
+                this.sidebarConstraints = {
+                    tabRail: { min: 200, max: 420, default: 260 },
+                    chatSidebar: { min: 260, max: 560, default: 320 }
+                };
+                this.activeResize = null;
+                this.rootStyle = document.documentElement.style;
+                this.handleSidebarResize = this.handleSidebarResize.bind(this);
+                this.stopSidebarResize = this.stopSidebarResize.bind(this);
                 
                 this.initializeElements();
+                this.setupResizableSidebars();
                 this.setupEventListeners();
                 this.createInitialTab();
                 this.setupKeyboardShortcuts();
@@ -186,6 +197,8 @@
                 this.chatClearBtn = document.getElementById('chatClearBtn');
                 this.contextPillsContainer = document.getElementById('contextPillsContainer');
                 this.tabSuggestions = document.getElementById('tabSuggestions');
+                this.tabRailResizer = document.getElementById('tabRailResizer');
+                this.chatSidebarResizer = document.getElementById('chatSidebarResizer');
 
                 // Listen for messages from webviews
                 window.addEventListener('message', (e) => {
@@ -248,6 +261,217 @@
                         }
                     }
                 });
+            }
+
+            setupResizableSidebars() {
+                if (!this.rootStyle) {
+                    this.rootStyle = document.documentElement.style;
+                }
+
+                const savedTabRailWidth = this.getStoredSidebarWidth('tabRailWidth');
+                if (savedTabRailWidth !== null) {
+                    this.setTabRailWidth(savedTabRailWidth, false);
+                }
+
+                const savedChatSidebarWidth = this.getStoredSidebarWidth('chatSidebarWidth');
+                if (savedChatSidebarWidth !== null) {
+                    this.setChatSidebarWidth(savedChatSidebarWidth, false);
+                }
+
+                if (this.tabRailResizer) {
+                    this.tabRailResizer.addEventListener('pointerdown', (event) => this.startSidebarResize('tabRail', event));
+                    this.tabRailResizer.addEventListener('keydown', (event) => this.handleResizerKeydown('tabRail', event));
+                }
+
+                if (this.chatSidebarResizer) {
+                    this.chatSidebarResizer.addEventListener('pointerdown', (event) => this.startSidebarResize('chatSidebar', event));
+                    this.chatSidebarResizer.addEventListener('keydown', (event) => this.handleResizerKeydown('chatSidebar', event));
+                }
+
+                this.updateContentAreaWidth();
+            }
+
+            getStoredSidebarWidth(key) {
+                try {
+                    const stored = localStorage.getItem(key);
+                    if (stored) {
+                        const parsed = parseInt(stored, 10);
+                        if (!Number.isNaN(parsed)) {
+                            return parsed;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Failed to read stored sidebar width:', error);
+                }
+                return null;
+            }
+
+            startSidebarResize(sidebar, event) {
+                if (event.button !== undefined && event.button !== 0) return;
+                event.preventDefault();
+                const clientX = event.clientX;
+                if (typeof clientX !== 'number') return;
+
+                const initialWidth = this.getCurrentSidebarWidth(sidebar);
+                this.activeResize = {
+                    sidebar,
+                    startX: clientX,
+                    initialWidth,
+                    lastWidth: initialWidth,
+                    handleElement: event.currentTarget
+                };
+
+                if (this.activeResize.handleElement) {
+                    this.activeResize.handleElement.classList.add('dragging');
+                    if (event.pointerId != null && this.activeResize.handleElement.setPointerCapture) {
+                        try {
+                            this.activeResize.handleElement.setPointerCapture(event.pointerId);
+                        } catch (_) {}
+                    }
+                }
+
+                document.addEventListener('pointermove', this.handleSidebarResize);
+                document.addEventListener('pointerup', this.stopSidebarResize);
+                document.addEventListener('pointercancel', this.stopSidebarResize);
+            }
+
+            handleSidebarResize(event) {
+                if (!this.activeResize) return;
+                event.preventDefault();
+                const clientX = event.clientX;
+                if (typeof clientX !== 'number') return;
+
+                let newWidth = this.activeResize.initialWidth;
+                if (this.activeResize.sidebar === 'tabRail') {
+                    newWidth = this.clampWidth(
+                        this.activeResize.initialWidth + (clientX - this.activeResize.startX),
+                        this.sidebarConstraints.tabRail.min,
+                        this.sidebarConstraints.tabRail.max
+                    );
+                    this.setTabRailWidth(newWidth, false);
+                } else {
+                    newWidth = this.clampWidth(
+                        this.activeResize.initialWidth + (this.activeResize.startX - clientX),
+                        this.sidebarConstraints.chatSidebar.min,
+                        this.sidebarConstraints.chatSidebar.max
+                    );
+                    this.setChatSidebarWidth(newWidth, false);
+                }
+
+                this.activeResize.lastWidth = newWidth;
+            }
+
+            stopSidebarResize(event) {
+                if (!this.activeResize) return;
+                const finalWidth = this.activeResize.lastWidth;
+
+                if (typeof finalWidth === 'number') {
+                    if (this.activeResize.sidebar === 'tabRail') {
+                        this.setTabRailWidth(finalWidth);
+                    } else {
+                        this.setChatSidebarWidth(finalWidth);
+                    }
+                }
+
+                if (this.activeResize.handleElement) {
+                    this.activeResize.handleElement.classList.remove('dragging');
+                    if (event && event.pointerId != null && this.activeResize.handleElement.releasePointerCapture) {
+                        try {
+                            this.activeResize.handleElement.releasePointerCapture(event.pointerId);
+                        } catch (_) {}
+                    }
+                }
+
+                this.activeResize = null;
+                document.removeEventListener('pointermove', this.handleSidebarResize);
+                document.removeEventListener('pointerup', this.stopSidebarResize);
+                document.removeEventListener('pointercancel', this.stopSidebarResize);
+            }
+
+            handleResizerKeydown(sidebar, event) {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                const step = event.shiftKey ? 20 : 10;
+
+                if (sidebar === 'tabRail') {
+                    const delta = event.key === 'ArrowLeft' ? -step : step;
+                    this.setTabRailWidth(this.getCurrentSidebarWidth('tabRail') + delta);
+                } else {
+                    const delta = event.key === 'ArrowLeft' ? step : -step;
+                    this.setChatSidebarWidth(this.getCurrentSidebarWidth('chatSidebar') + delta);
+                }
+
+                event.preventDefault();
+            }
+
+            setTabRailWidth(width, persist = true) {
+                const clamped = this.clampWidth(
+                    width,
+                    this.sidebarConstraints.tabRail.min,
+                    this.sidebarConstraints.tabRail.max
+                );
+
+                if (this.rootStyle) {
+                    this.rootStyle.setProperty('--tab-rail-width', `${clamped}px`);
+                }
+
+                if (persist) {
+                    this.persistSidebarWidth('tabRailWidth', clamped);
+                }
+
+                this.updateContentAreaWidth();
+                return clamped;
+            }
+
+            setChatSidebarWidth(width, persist = true) {
+                const clamped = this.clampWidth(
+                    width,
+                    this.sidebarConstraints.chatSidebar.min,
+                    this.sidebarConstraints.chatSidebar.max
+                );
+
+                if (this.rootStyle) {
+                    this.rootStyle.setProperty('--chat-sidebar-width', `${clamped}px`);
+                }
+
+                if (persist) {
+                    this.persistSidebarWidth('chatSidebarWidth', clamped);
+                }
+
+                this.updateContentAreaWidth();
+                return clamped;
+            }
+
+            persistSidebarWidth(key, value) {
+                try {
+                    localStorage.setItem(key, String(value));
+                } catch (error) {
+                    console.warn('Failed to persist sidebar width:', error);
+                }
+            }
+
+            getCurrentSidebarWidth(sidebar) {
+                const varName = sidebar === 'tabRail' ? '--tab-rail-width' : '--chat-sidebar-width';
+                const constraints = sidebar === 'tabRail' ? this.sidebarConstraints.tabRail : this.sidebarConstraints.chatSidebar;
+                const computed = getComputedStyle(document.documentElement).getPropertyValue(varName);
+                const parsed = parseInt(computed, 10);
+                if (!Number.isNaN(parsed)) {
+                    return parsed;
+                }
+                return constraints.default;
+            }
+
+            clampWidth(value, min, max) {
+                return Math.min(Math.max(value, min), max);
+            }
+
+            updateContentAreaWidth() {
+                if (!this.contentArea) return;
+                const chatOpen = this.chatSidebar && this.chatSidebar.classList.contains('open');
+                if (chatOpen) {
+                    this.contentArea.style.width = `calc(100% - var(--tab-rail-width) - var(--chat-sidebar-width) - var(--spacing-1) - var(--spacing-1))`;
+                } else {
+                    this.contentArea.style.width = '';
+                }
             }
 
             async handleNewTabChat(data, sourceTab) {
@@ -1396,7 +1620,7 @@
                 }
                 
                 this.chatSidebar.classList.add('open');
-                this.contentArea.style.width = `calc(100% - var(--tab-rail-width) - var(--chat-sidebar-width) - var(--spacing-1) - var(--spacing-1))`;
+                this.updateContentAreaWidth();
                 this.chatInput.focus();
                 this.renderChatHistory();
                 this.updateChatContextUI(currentTab);
@@ -1406,7 +1630,7 @@
             hideChatSidebar(clearHistory = false) {
                 if (!this.chatSidebar) return;
                 this.chatSidebar.classList.remove('open');
-                this.contentArea.style.width = '';
+                this.updateContentAreaWidth();
 
                 const currentTab = this.tabs.find(t => t.id === this.activeTabId);
                 if (currentTab) {
