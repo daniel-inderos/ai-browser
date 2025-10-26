@@ -31,7 +31,7 @@ const createWindow = () => {
       webSecurity: true,
       webviewTag: true, // Enable webview tags
     },
-    titleBarStyle: 'default',
+    titleBarStyle: 'hiddenInset', // Hide titlebar, show traffic lights on macOS
     show: false, // Don't show until ready
   });
 

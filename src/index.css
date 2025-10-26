@@ -83,7 +83,7 @@
     --content-padding: var(--spacing-4);
     --tab-rail-width: 260px;
     --chat-sidebar-width: 320px;
-    --rail-header-height: 48px;
+    --rail-header-height: 36px;
 }
 
 /* Dark Theme */
@@ -254,11 +254,13 @@ textarea:focus {
     align-items: center;
     justify-content: space-between;
     height: var(--rail-header-height);
-    padding: 0 var(--spacing-3);
+    padding: 3px var(--spacing-3);
+    padding-left: 78px; /* Space for macOS traffic lights */
     border-bottom: 1px solid var(--color-border);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    background: linear-gradient(180deg, var(--color-surface-elevated), rgba(0,0,0,0));
+    background: transparent; /* Fully transparent titlebar */
+    -webkit-app-region: drag; /* Make header draggable on macOS */
 }
 
 /* Sidebar URL Bar (sticky) */
@@ -270,6 +272,7 @@ textarea:focus {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     background: linear-gradient(180deg, var(--color-surface) 0%, rgba(0,0,0,0));
+    -webkit-app-region: drag; /* Make URL bar area draggable */
     border-bottom: 1px solid var(--color-border);
 }
 
@@ -277,12 +280,14 @@ textarea:focus {
     display: flex;
     gap: var(--spacing-1);
     margin-bottom: var(--spacing-2);
+    -webkit-app-region: no-drag; /* Allow interaction in drag area */
 }
 
 .rail-url-actions {
     display: flex;
     gap: var(--spacing-2);
     margin-top: var(--spacing-2);
+    -webkit-app-region: no-drag; /* Allow interaction in drag area */
 }
 
 /* Make the url bar full width inside the rail */
@@ -597,6 +602,7 @@ textarea:focus {
     cursor: pointer;
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-sm);
+    -webkit-app-region: no-drag; /* Allow interaction in drag area */
 }
 
 .nav-btn:hover:not(:disabled) {
@@ -633,6 +639,7 @@ textarea:focus {
 .url-input-wrapper {
     flex: 1;
     position: relative;
+    -webkit-app-region: no-drag; /* Allow interaction in drag area */
 }
 
 .url-bar {
@@ -649,6 +656,7 @@ textarea:focus {
     box-shadow: var(--shadow-sm);
     -webkit-user-select: text;
     user-select: text;
+    -webkit-app-region: no-drag; /* Allow interaction in drag area */
 }
 
 .url-bar::placeholder {
@@ -689,6 +697,7 @@ textarea:focus {
     cursor: pointer;
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-md);
+    -webkit-app-region: no-drag; /* Allow interaction in drag area */
     min-width: 60px;
     display: flex;
     align-items: center;
@@ -719,9 +728,11 @@ textarea:focus {
     overflow: hidden;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     /* Left margin accounts for rail width so content fits beside sidebar */
-    margin: var(--spacing-1) var(--spacing-1) 0 calc(var(--spacing-1) + var(--tab-rail-width));
+    /* Equal padding all around for clean, consistent spacing */
+    margin: var(--spacing-2);
+    margin-left: calc(var(--spacing-2) + var(--tab-rail-width));
     /* Width reduced by rail + horizontal margins */
-    width: calc(100% - var(--tab-rail-width) - var(--spacing-1) - var(--spacing-1));
+    width: calc(100% - var(--tab-rail-width) - var(--spacing-2) - var(--spacing-2));
     box-shadow: var(--shadow-lg);
 }
 
@@ -731,6 +742,7 @@ webview {
     border: none;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--color-surface);
+    -webkit-app-region: no-drag; /* Webview content shouldn't be draggable */
 }
 
 .webview-container {
@@ -929,6 +941,7 @@ webview {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     width: 36px;
+    -webkit-app-region: no-drag; /* Allow interaction in drag area */
     height: 36px;
     display: flex;
     align-items: center;
