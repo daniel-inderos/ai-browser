@@ -194,6 +194,13 @@ textarea:focus {
     transition: width 150ms ease-in-out, transform 150ms ease-in-out;
 }
 
+/* Disable transitions during resize for smooth dragging */
+.sidebar-resizing .tab-rail,
+.sidebar-resizing .content-area,
+.sidebar-resizing .chat-sidebar {
+    transition: none !important;
+}
+
 .tab-rail.collapsed {
     width: 0;
     overflow: hidden;
@@ -454,12 +461,16 @@ textarea:focus {
 .content-area {
     margin-left: var(--tab-rail-width);
     width: calc(100% - var(--tab-rail-width) - var(--spacing-1) - var(--spacing-1));
-    transition: margin-left 150ms ease-in-out, width 150ms ease-in-out;
 }
 
 .browser-container:has(.tab-rail.collapsed) .content-area {
     margin-left: var(--spacing-1);
     width: calc(100% - var(--spacing-1) - var(--spacing-1));
+}
+
+/* Content area when chat sidebar is open */
+.browser-container:has(.chat-sidebar.open) .content-area {
+    width: calc(100% - var(--tab-rail-width) - var(--chat-sidebar-width) - var(--spacing-1) - var(--spacing-1));
 }
 
 /* Tab Bar Styles */
@@ -937,34 +948,48 @@ webview {
 /* Chat and Summarize Buttons */
 .chat-btn,
 .summarize-btn {
-    background: var(--color-surface-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    width: 36px;
-    -webkit-app-region: no-drag; /* Allow interaction in drag area */
-    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    width: 36px;
+    height: 36px;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-sm);
-    color: var(--color-text-secondary);
+    -webkit-app-region: no-drag; /* Allow interaction in drag area */
 }
 
-.chat-btn:hover,
-.summarize-btn:hover {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: var(--color-text-inverse);
+.chat-btn:hover:not(:disabled),
+.summarize-btn:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
+    color: var(--color-text-primary);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
 
-.chat-btn:active,
-.summarize-btn:active {
+.chat-btn:active:not(:disabled),
+.summarize-btn:active:not(:disabled) {
     transform: translateY(0);
     box-shadow: var(--shadow-sm);
+}
+
+.chat-btn:disabled,
+.summarize-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.chat-btn svg,
+.summarize-btn svg {
+    stroke-width: 2;
 }
 
 /* Chat Sidebar */
