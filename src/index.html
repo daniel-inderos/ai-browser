@@ -139,6 +139,38 @@
         </main>
     </div>
 
+    <!-- Command Palette -->
+    <div class="command-palette-backdrop" id="commandPaletteBackdrop">
+        <div class="command-palette">
+            <div class="command-palette-input-container">
+                <div class="command-palette-mode-switcher">
+                    <button class="command-palette-mode-btn active" id="commandPaletteModeSearch" data-mode="search">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="M21 21l-4.35-4.35"></path>
+                        </svg>
+                        Search
+                    </button>
+                    <button class="command-palette-mode-btn" id="commandPaletteModeAsk" data-mode="ask">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
+                        </svg>
+                        Ask
+                    </button>
+                </div>
+                <input 
+                    type="text" 
+                    class="command-palette-input" 
+                    id="commandPaletteInput" 
+                    placeholder="Search or Enter URL..."
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+            </div>
+            <div class="command-palette-results" id="commandPaletteResults"></div>
+        </div>
+    </div>
+
     <script>
         class BrowserManager {
             constructor() {
@@ -175,9 +207,6 @@
             }
 
             getDisplayUrl(url) {
-                if (url && url.includes('newtab.html')) {
-                    return '';
-                }
                 return url || '';
             }
 
@@ -210,6 +239,14 @@
                 this.chatSidebarResizer = document.getElementById('chatSidebarResizer');
                 this.tabRail = document.querySelector('.tab-rail');
                 this.hoverTriggerZone = document.getElementById('hoverTriggerZone');
+                // Command palette elements
+                this.commandPaletteBackdrop = document.getElementById('commandPaletteBackdrop');
+                this.commandPaletteInput = document.getElementById('commandPaletteInput');
+                this.commandPaletteResults = document.getElementById('commandPaletteResults');
+                this.commandPaletteModeSearch = document.getElementById('commandPaletteModeSearch');
+                this.commandPaletteModeAsk = document.getElementById('commandPaletteModeAsk');
+                this.commandPaletteMode = 'search'; // Default mode
+                this.selectedResultIndex = -1;
 
                 // Listen for messages from webviews
                 window.addEventListener('message', (e) => {
@@ -243,7 +280,7 @@
                         }
                         if (sourceWebview) {
                             const tabData = this.tabs
-                                .filter(t => t.id !== sourceWebview.id && !t.url.includes('newtab.html'))
+                                .filter(t => t.id !== sourceWebview.id)
                                 .map(t => ({ id: t.id, title: t.title, url: t.url }));
 
                         try {
@@ -609,14 +646,49 @@
             }
 
             setupEventListeners() {
-                // Tab management
-                this.newTabBtn.addEventListener('click', () => this.createTab());
+                // Tab management - show command palette instead of creating tab directly
+                this.newTabBtn.addEventListener('click', () => this.showCommandPalette());
                 
                 // Navigation
                 this.backBtn.addEventListener('click', () => this.navigateBack());
                 this.forwardBtn.addEventListener('click', () => this.navigateForward());
                 this.refreshBtn.addEventListener('click', () => this.refreshPage());
                 this.retryBtn.addEventListener('click', () => this.refreshPage());
+                
+                // Command palette event listeners
+                this.commandPaletteBackdrop.addEventListener('click', (e) => {
+                    if (e.target === this.commandPaletteBackdrop) {
+                        this.hideCommandPalette();
+                    }
+                });
+                
+                this.commandPaletteModeSearch.addEventListener('click', () => {
+                    this.setCommandPaletteMode('search');
+                });
+                
+                this.commandPaletteModeAsk.addEventListener('click', () => {
+                    this.setCommandPaletteMode('ask');
+                });
+                
+                this.commandPaletteInput.addEventListener('input', () => {
+                    this.updateCommandPaletteResults();
+                });
+                
+                this.commandPaletteInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.executeCommandPaletteAction();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        this.hideCommandPalette();
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        this.selectNextResult();
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        this.selectPreviousResult();
+                    }
+                });
                 
                 // URL bar
                 this.urlBar.addEventListener('keypress', (e) => {
@@ -664,11 +736,8 @@
 
                 // Electron menu shortcuts
                 // From menu/global accelerator
-                window.electronAPI.onNewTab(async () => {
-                    const tab = await this.createTab();
-                    if (tab && tab.url && tab.url.includes('newtab.html')) {
-                        this.ensureNewTabFocus(tab);
-                    }
+                window.electronAPI.onNewTab(() => {
+                    this.showCommandPalette();
                 });
                 window.electronAPI.onCloseTab(() => this.closeActiveTab());
                 window.electronAPI.onNavigateBack(() => this.navigateBack());
@@ -698,11 +767,7 @@
                         switch (e.key) {
                             case 't':
                                 e.preventDefault();
-                                this.createTab().then(tab => {
-                                    if (tab && tab.url && tab.url.includes('newtab.html')) {
-                                        this.ensureNewTabFocus(tab);
-                                    }
-                                });
+                                this.showCommandPalette();
                                 break;
                             case 'w':
                                 e.preventDefault();
@@ -737,26 +802,6 @@
                 });
             }
 
-            // Try repeatedly to focus and select the new-tab search input
-            ensureNewTabFocus(tabOrId, attempts = 15) {
-                try {
-                    const tab = typeof tabOrId === 'string' ? this.tabs.find(t => t.id === tabOrId) : tabOrId;
-                    if (!tab || !tab.webview) return;
-                    // Only applicable for new tab page
-                    if (!(tab.url && tab.url.includes('newtab.html'))) return;
-                    tab.webview.focus();
-                    const script = '(() => { const el = document.getElementById("searchInput"); if (el) { el.focus(); if (el.select) el.select(); return true; } return false; })()';
-                    tab.webview.executeJavaScript(script).then(ok => {
-                        if (!ok && attempts > 0) {
-                            setTimeout(() => this.ensureNewTabFocus(tab.id, attempts - 1), 100);
-                        }
-                    }).catch(() => {
-                        if (attempts > 0) {
-                            setTimeout(() => this.ensureNewTabFocus(tab.id, attempts - 1), 100);
-                        }
-                    });
-                } catch (_) { /* noop */ }
-            }
 
             selectTabByNumber(n) {
                 if (!this.tabs.length) return;
@@ -796,7 +841,7 @@
                 this.urlBarContainer.style.display = 'flex';
             }
 
-            async createTab(url = 'newtab.html') {
+            async createTab(url = 'https://www.google.com') {
                 const preloadPath = await window.electronAPI.getPreloadPath();
                 console.log('createTab called with url:', url);
                 const tabId = `tab-${++this.tabCounter}`;
@@ -980,24 +1025,12 @@
                         if (this.activeTabId === tabId) {
                             this.urlBar.value = this.getDisplayUrl(webview.getURL());
                             this.hideLoading();
-                            const url = webview.getURL();
-                            // Update button visibility based on URL
-                            const isNewTab = url && url.includes('newtab.html');
+                            // Always show chat and summarize buttons
                             if (this.chatBtn) {
-                                this.chatBtn.style.display = isNewTab ? 'none' : 'flex';
+                                this.chatBtn.style.display = 'flex';
                             }
                             if (this.summarizeBtn) {
-                                this.summarizeBtn.style.display = isNewTab ? 'none' : 'flex';
-                            }
-                            if (isNewTab) {
-                                webview.focus();
-                                // Delay to ensure newtab is fully loaded, then focus + select search input
-                                setTimeout(() => {
-                                    const script = '(() => { const el = document.getElementById("searchInput"); if (el) { el.focus(); if (el.select) el.select(); } })()';
-                                    webview.executeJavaScript(script).catch(err => {
-                                        console.log('Focus script failed (expected during initialization):', err.message);
-                                    });
-                                }, 100);
+                                this.summarizeBtn.style.display = 'flex';
                             }
                         }
                     } catch (error) {
@@ -1013,7 +1046,7 @@
                         const arg = (event.args && event.args[0]) || {};
                         if (channel === 'request-tabs') {
                             const tabData = this.tabs
-                                .filter(t => t.id !== tab.id && !t.url.includes('newtab.html'))
+                                .filter(t => t.id !== tab.id)
                                 .map(t => ({ id: t.id, title: t.title, url: t.url }));
                             try {
                                 webview.send('guest-message', { type: 'tabs-response', tabs: tabData });
@@ -1031,11 +1064,7 @@
                                     this.closeTab(tab.id);
                                     break;
                                 case 'new-tab':
-                                    this.createTab().then(newTab => {
-                                        if (newTab && newTab.url && newTab.url.includes('newtab.html')) {
-                                            this.ensureNewTabFocus(newTab);
-                                        }
-                                    });
+                                    this.showCommandPalette();
                                     break;
                                 case 'focus-url':
                                     if (!this.urlBarContainer || this.urlBarContainer.style.display !== 'none') {
@@ -1086,14 +1115,6 @@
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = this.getDisplayUrl(e.url);
                         this.updateNavBarVisibility(e.url);
-                        // Update button visibility based on URL
-                        const isNewTab = e.url && e.url.includes('newtab.html');
-                        if (this.chatBtn) {
-                            this.chatBtn.style.display = isNewTab ? 'none' : 'flex';
-                        }
-                        if (this.summarizeBtn) {
-                            this.summarizeBtn.style.display = isNewTab ? 'none' : 'flex';
-                        }
                     }
                 });
 
@@ -1105,14 +1126,6 @@
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = this.getDisplayUrl(e.url);
                         this.updateNavBarVisibility(e.url);
-                        // Update button visibility based on URL
-                        const isNewTab = e.url && e.url.includes('newtab.html');
-                        if (this.chatBtn) {
-                            this.chatBtn.style.display = isNewTab ? 'none' : 'flex';
-                        }
-                        if (this.summarizeBtn) {
-                            this.summarizeBtn.style.display = isNewTab ? 'none' : 'flex';
-                        }
                     }
                 });
 
@@ -1150,15 +1163,6 @@
                     }
                     if (this.activeTabId === tabId) {
                         this.hideLoading();
-                        // Update button visibility based on URL
-                        const url = webview.getURL();
-                        const isNewTab = url && url.includes('newtab.html');
-                        if (this.chatBtn) {
-                            this.chatBtn.style.display = isNewTab ? 'none' : 'flex';
-                        }
-                        if (this.summarizeBtn) {
-                            this.summarizeBtn.style.display = isNewTab ? 'none' : 'flex';
-                        }
                     }
                 });
 
@@ -1201,9 +1205,192 @@
                 this.errorState.style.display = 'flex';
             }
 
+            // Command Palette Methods
+            showCommandPalette() {
+                this.commandPaletteInput.value = '';
+                this.selectedResultIndex = -1;
+                this.commandPaletteBackdrop.classList.add('active');
+                this.updateCommandPaletteResults();
+                // Use setTimeout to ensure the backdrop is visible before focusing
+                setTimeout(() => {
+                    this.commandPaletteInput.focus();
+                }, 50);
+            }
+
+            hideCommandPalette() {
+                this.commandPaletteBackdrop.classList.remove('active');
+                this.commandPaletteInput.value = '';
+                this.selectedResultIndex = -1;
+                this.commandPaletteResults.innerHTML = '';
+            }
+
+            setCommandPaletteMode(mode) {
+                this.commandPaletteMode = mode;
+                
+                if (mode === 'search') {
+                    this.commandPaletteModeSearch.classList.add('active');
+                    this.commandPaletteModeAsk.classList.remove('active');
+                    this.commandPaletteInput.placeholder = 'Search or Enter URL...';
+                } else {
+                    this.commandPaletteModeSearch.classList.remove('active');
+                    this.commandPaletteModeAsk.classList.add('active');
+                    this.commandPaletteInput.placeholder = 'Ask a question...';
+                }
+                
+                this.updateCommandPaletteResults();
+                this.commandPaletteInput.focus();
+            }
+
+            updateCommandPaletteResults() {
+                const query = this.commandPaletteInput.value.trim().toLowerCase();
+                const results = [];
+                
+                // Add open tabs
+                this.tabs.forEach(tab => {
+                    if (tab.id !== this.activeTabId && 
+                        (!query || tab.title.toLowerCase().includes(query) || tab.url.toLowerCase().includes(query))) {
+                        results.push({
+                            type: 'tab',
+                            title: tab.title,
+                            url: tab.url,
+                            favicon: tab.railFavicon ? tab.railFavicon.src : '',
+                            action: 'Switch to Tab',
+                            data: tab
+                        });
+                    }
+                });
+                
+                // Add search suggestions if there's a query
+                if (query && query.length > 0) {
+                    results.push({
+                        type: 'search',
+                        title: `Search "${this.commandPaletteInput.value.trim()}"`,
+                        url: `google.com/search?q=${encodeURIComponent(this.commandPaletteInput.value.trim())}`,
+                        favicon: 'https://www.google.com/favicon.ico',
+                        action: 'Search',
+                        data: null
+                    });
+                }
+                
+                // Show results
+                this.renderCommandPaletteResults(results);
+            }
+
+            renderCommandPaletteResults(results) {
+                this.commandPaletteResults.innerHTML = '';
+                
+                if (results.length === 0 && this.commandPaletteInput.value.trim()) {
+                    // Show "search web" option
+                    const item = document.createElement('div');
+                    item.className = 'command-palette-result-item';
+                    item.innerHTML = `
+                        <div class="command-palette-result-favicon"></div>
+                        <div class="command-palette-result-content">
+                            <div class="command-palette-result-title">Search the web</div>
+                            <div class="command-palette-result-url">Press Enter to search</div>
+                        </div>
+                    `;
+                    item.addEventListener('click', () => this.executeCommandPaletteAction());
+                    this.commandPaletteResults.appendChild(item);
+                } else {
+                    results.forEach((result, index) => {
+                        const item = document.createElement('div');
+                        item.className = 'command-palette-result-item';
+                        if (index === this.selectedResultIndex) {
+                            item.classList.add('selected');
+                        }
+                        
+                        const faviconHtml = result.favicon 
+                            ? `<img src="${result.favicon}" class="command-palette-result-favicon" />`
+                            : '<div class="command-palette-result-favicon"></div>';
+                        
+                        item.innerHTML = `
+                            ${faviconHtml}
+                            <div class="command-palette-result-content">
+                                <div class="command-palette-result-title">${this.escapeHtml(result.title)}</div>
+                                <div class="command-palette-result-url">${this.escapeHtml(result.url)}</div>
+                            </div>
+                            <div class="command-palette-result-action">${result.action} →</div>
+                        `;
+                        
+                        item.addEventListener('click', () => {
+                            if (result.type === 'tab') {
+                                this.switchToTab(result.data.id);
+                                this.hideCommandPalette();
+                            } else if (result.type === 'search') {
+                                this.executeCommandPaletteAction();
+                            }
+                        });
+                        
+                        this.commandPaletteResults.appendChild(item);
+                    });
+                }
+            }
+
+            selectNextResult() {
+                const items = this.commandPaletteResults.querySelectorAll('.command-palette-result-item');
+                if (items.length === 0) return;
+                
+                this.selectedResultIndex = (this.selectedResultIndex + 1) % items.length;
+                items.forEach((item, index) => {
+                    item.classList.toggle('selected', index === this.selectedResultIndex);
+                });
+            }
+
+            selectPreviousResult() {
+                const items = this.commandPaletteResults.querySelectorAll('.command-palette-result-item');
+                if (items.length === 0) return;
+                
+                this.selectedResultIndex = this.selectedResultIndex <= 0 
+                    ? items.length - 1 
+                    : this.selectedResultIndex - 1;
+                items.forEach((item, index) => {
+                    item.classList.toggle('selected', index === this.selectedResultIndex);
+                });
+            }
+
+            async executeCommandPaletteAction() {
+                const value = this.commandPaletteInput.value.trim();
+                
+                if (this.commandPaletteMode === 'search') {
+                    // Search mode: create new tab with search or URL
+                    if (!value) {
+                        this.hideCommandPalette();
+                        return;
+                    }
+                    
+                    let targetUrl = value;
+                    if (!/^https?:\/\//i.test(value)) {
+                        targetUrl = value.includes('.') && !value.includes(' ')
+                            ? 'https://' + value
+                            : 'https://www.google.com/search?q=' + encodeURIComponent(value);
+                    }
+                    
+                    this.hideCommandPalette();
+                    await this.createTab(targetUrl);
+                } else {
+                    // Ask mode: create new tab with Google and open chat sidebar
+                    this.hideCommandPalette();
+                    const userQuestion = value; // Save the question if user typed one
+                    const tab = await this.createTab('https://www.google.com');
+                    
+                    // Wait a bit for tab to be ready, then open chat sidebar
+                    setTimeout(() => {
+                        if (tab && tab.id === this.activeTabId) {
+                            this.showChatSidebar();
+                            // If user typed a question, pre-fill it
+                            if (userQuestion) {
+                                this.chatInput.value = userQuestion;
+                                this.chatInput.focus();
+                            }
+                        }
+                    }, 300);
+                }
+            }
+
             createInitialTab() {
                 console.log('createInitialTab called');
-                this.createTab('newtab.html');
+                this.createTab('https://www.google.com');
             }
 
             switchToTab(tabId) {
@@ -1232,30 +1419,19 @@
                     this.urlBar.value = this.getDisplayUrl(tab.url);
                     this.updateNavBarVisibility(tab.url);
 
-                    // Show/hide chat and summarize buttons based on whether it's a new tab
-                    const isNewTab = tab.url && tab.url.includes('newtab.html');
+                    // Always show chat and summarize buttons
                     if (this.chatBtn) {
-                        this.chatBtn.style.display = isNewTab ? 'none' : 'flex';
+                        this.chatBtn.style.display = 'flex';
                     }
                     if (this.summarizeBtn) {
-                        this.summarizeBtn.style.display = isNewTab ? 'none' : 'flex';
+                        this.summarizeBtn.style.display = 'flex';
                     }
 
-                    if (tab.url && tab.url.includes('newtab.html')) {
-                        this.hideChatSidebar(true); // Hide and clear for newtab
-                        if (tab.webview) {
-                            tab.webview.focus();
-                            const script = '(() => { const el = document.getElementById("searchInput"); if (el) { el.focus(); if (el.select) el.select(); } })()';
-                            tab.webview.executeJavaScript(script).catch(err => {
-                                console.log('Focus script failed:', err.message);
-                            });
-                        }
+                    // Restore chat sidebar state for this tab
+                    if (tab.chatSidebarOpen) {
+                        this.showChatSidebar();
                     } else {
-                        if (tab.chatSidebarOpen) {
-                            this.showChatSidebar();
-                        } else {
-                            this.hideChatSidebar();
-                        }
+                        this.hideChatSidebar();
                     }
                     
                     this.updateChatContextUI(tab);
@@ -1264,14 +1440,6 @@
                         this.urlBar.focus();
                     } else if (tab.webview) {
                         tab.webview.focus();
-                    }
-                    
-                    // Guarantee the new-tab search box is focused and selected so shortcuts work without extra clicks
-                    if (tab.url && tab.url.includes('newtab.html') && tab.webview) {
-                        const script = '(() => { const el = document.getElementById("searchInput"); if (el) { el.focus(); if (el.select) el.select(); } })()';
-                        tab.webview.executeJavaScript(script).catch(err => {
-                            console.log('Focus script failed:', err.message);
-                        });
                     }
                 }
             }
@@ -1436,7 +1604,7 @@
             async handleSummarizePage() {
                 const tabId = this.activeTabId;
                 const activeTab = this.tabs.find(t => t.id === tabId);
-                if (!activeTab || activeTab.url.includes('newtab.html')) {
+                if (!activeTab) {
                     return;
                 }
 
@@ -1524,11 +1692,7 @@
 
             toggleChatSidebar() {
                 if (!this.chatSidebar) return;
-                // Prevent opening on new-tab pages
                 const currentTab = this.tabs.find(t => t.id === this.activeTabId);
-                if (currentTab && currentTab.url && currentTab.url.includes('newtab.html')) {
-                    return;
-                }
                 const isOpen = this.chatSidebar.classList.toggle('open');
                 if (currentTab) {
                     currentTab.chatSidebarOpen = isOpen;
@@ -1546,8 +1710,8 @@
                 const currentTab = this.tabs.find(t => t.id === this.activeTabId);
                 if (!currentTab) return;
 
-                // Auto-add current page as context if it's not a newtab and not already added
-                if (!currentTab.url.includes('newtab.html') && !currentTab.referencedTabs.has(currentTab.id)) {
+                // Auto-add current page as context if not already added
+                if (!currentTab.referencedTabs.has(currentTab.id)) {
                     currentTab.referencedTabs.add(currentTab.id);
                 }
                 
@@ -1620,10 +1784,8 @@
                 const tab = this.tabs.find(t => t.id === this.activeTabId);
                 if (tab) {
                     tab.referencedTabs.clear();
-                    // Re-add current tab if it's a valid context page
-                    if (!tab.url.includes('newtab.html')) {
-                        tab.referencedTabs.add(tab.id);
-                    }
+                    // Re-add current tab as context
+                    tab.referencedTabs.add(tab.id);
                     this.updateChatContextUI(tab);
                 }
             }

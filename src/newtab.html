@@ -230,6 +230,12 @@
                 this.mode = 'search';
                 this.askManager = null;
                 this.setupEventListeners();
+                
+                // Check if we should open in Ask mode based on URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('mode') === 'ask') {
+                    this.switchMode('ask');
+                }
             }
 
             setupEventListeners() {
