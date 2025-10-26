@@ -1,7 +1,7 @@
 // Load environment variables
 require('dotenv').config();
 
-const { app, BrowserWindow, ipcMain, Menu, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('node:path');
 const { initialize, enable } = require('@electron/remote/main');
 const { streamChat } = require('./openaiHelper');
@@ -294,23 +294,6 @@ app.whenReady().then(() => {
   console.log('Creating menu...');
   createMenu();
 
-  // Register global shortcuts for tab selection (Cmd/Ctrl + 1..9)
-  try {
-    for (let i = 1; i <= 9; i++) {
-      const accelerator = `CommandOrControl+${i}`;
-      const ok = globalShortcut.register(accelerator, () => {
-        if (mainWindow) {
-          mainWindow.webContents.send('select-tab', { index: i });
-        }
-      });
-      if (!ok) {
-        console.warn('Failed to register shortcut:', accelerator);
-      }
-    }
-  } catch (err) {
-    console.error('Error registering global shortcuts:', err);
-  }
-
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   app.on('activate', () => {
@@ -324,14 +307,5 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
-  }
-});
-
-// Ensure shortcuts are cleaned up
-app.on('will-quit', () => {
-  try {
-    globalShortcut.unregisterAll();
-  } catch (err) {
-    console.error('Error unregistering global shortcuts:', err);
   }
 });
