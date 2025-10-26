@@ -148,23 +148,6 @@ ipcMain.handle('chat-send', async (event, { id, messages, contexts }) => {
   }
 });
 
-ipcMain.handle('summarize-page', async (event, { id, context }) => {
-  try {
-    const messages = [
-      {
-        role: 'user',
-        content: `Summarize the following page in one short sentence.\nTitle: ${context.title}\nURL: ${context.url}\nContent: ${context.content}`,
-      },
-    ];
-    let summary = '';
-    for await (const token of streamChat(messages)) {
-      summary += token;
-    }
-    return { id, summary };
-  } catch (error) {
-    return { id, error: error.message };
-  }
-});
 
 // Create application menu
 const createMenu = () => {
@@ -271,6 +254,15 @@ const createMenu = () => {
           click: () => {
             if (mainWindow) {
               mainWindow.webContents.send('toggle-chat');
+            }
+          }
+        },
+        {
+          label: 'Toggle Sidebar',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('toggle-sidebar');
             }
           }
         },

@@ -12,7 +12,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // AI Chat
   sendChat: (id, messages, contexts) => ipcRenderer.invoke('chat-send', { id, messages, contexts }),
   onChatStream: (callback) => ipcRenderer.on('chat-stream', (_e, data) => callback(data)),
-  summarizePage: (id, context) => ipcRenderer.invoke('summarize-page', { id, context }),
 
   // Navigation events
   onNewTab: (callback) => ipcRenderer.on('new-tab', callback),
@@ -22,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onRefreshPage: (callback) => ipcRenderer.on('refresh-page', callback),
   onFocusUrl: (callback) => ipcRenderer.on('focus-url', callback),
   onToggleChat: (callback) => ipcRenderer.on('toggle-chat', callback),
+  onToggleSidebar: (callback) => ipcRenderer.on('toggle-sidebar', callback),
   onSelectTab: (callback) => ipcRenderer.on('select-tab', (_e, data) => callback(data)),
 
   // Remove listeners
