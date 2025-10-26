@@ -1,3 +1,6 @@
+(yes this readme is outdated and written with ai, i will update it soon)
+
+
 # AI Browser
 
 A modern web browser with AI-powered features built with Electron.
