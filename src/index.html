@@ -687,6 +687,11 @@
                     } else if (e.key === 'ArrowUp') {
                         e.preventDefault();
                         this.selectPreviousResult();
+                    } else if (e.key === 'Tab') {
+                        e.preventDefault();
+                        // Switch between Search and Ask modes
+                        const newMode = this.commandPaletteMode === 'search' ? 'ask' : 'search';
+                        this.setCommandPaletteMode(newMode);
                     }
                 });
                 
