@@ -229,11 +229,18 @@
                 };
                 this.mode = 'search';
                 this.askManager = null;
+                this.autoSendQuery = null;
                 this.setupEventListeners();
                 
                 // Check if we should open in Ask mode based on URL parameter
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('mode') === 'ask') {
+                    // Hide mode toggle when in Ask mode
+                    document.getElementById('modeToggle').style.display = 'none';
+                    
+                    // Store query for auto-send after initialization
+                    this.autoSendQuery = urlParams.get('query');
+                    
                     this.switchMode('ask');
                 }
             }
@@ -298,7 +305,7 @@
                     this.elements.searchInput.focus();
                 } else {
                     if (!this.askManager) {
-                        this.askManager = new AskManager();
+                        this.askManager = new AskManager(this.autoSendQuery);
                     }
                     // Expand to full-page Ask with a smooth animation
                     // Use rAF to ensure class toggle animates cleanly
@@ -321,7 +328,7 @@
         }
 
         class AskManager {
-            constructor() {
+            constructor(autoSendQuery = null) {
                 this.elements = {
                     chatHistory: document.getElementById('chatHistory'),
                     contextPillsContainer: document.getElementById('contextPillsContainer'),
@@ -338,8 +345,19 @@
                 this.allTabs = [];
                 this.currentStream = null;
                 this.marked = window.marked;
+                // Generate unique session ID for this chat
+                this.sessionId = 'newtab-' + Date.now();
                 this.setupEventListeners();
                 this.renderEmptyState();
+                
+                // Auto-send query if provided
+                if (autoSendQuery) {
+                    setTimeout(() => {
+                        this.elements.chatInput.value = autoSendQuery;
+                        this.elements.chatSendBtn.disabled = false;
+                        this.handleChatSend();
+                    }, 200);
+                }
             }
 
             setupEventListeners() {
@@ -384,6 +402,16 @@
                 this.session.push(assistantMsg);
                 this.renderChatHistory();
 
+                // Update document title with first message
+                if (this.session.filter(m => m.role === 'user').length === 1) {
+                    const chatTitle = content.substring(0, 50);
+                    document.title = chatTitle;
+                    // Send IPC message to update parent tab title and URL bar
+                    if (window.electronAPI && window.electronAPI.sendToHost) {
+                        window.electronAPI.sendToHost('update-title', { title: chatTitle });
+                    }
+                }
+
                 const reqId = Date.now().toString();
                 this.currentStream = { id: reqId, assistantIndex: this.session.length - 1 };
                 this.toggleStreamingUI(true);
@@ -412,6 +440,8 @@
                     this.updateAssistantMessage(assistantMsg.content, true);
                     this.currentStream = null;
                     this.toggleStreamingUI(false);
+                    // Save chat session after completion
+                    this.saveChatSession();
                 }
             }
             
@@ -526,6 +556,28 @@
                 this.renderChatHistory();
                 this.renderContextPills();
                 this.updatePlaceholder();
+                // Generate new session ID for next chat
+                this.sessionId = 'newtab-' + Date.now();
+            }
+
+            async saveChatSession() {
+                try {
+                    if (this.session && this.session.length > 0 && window.electronAPI && window.electronAPI.saveChat) {
+                        await window.electronAPI.saveChat(this.sessionId, this.session);
+                        // Update document title with first message
+                        const firstUserMessage = this.session.find(msg => msg.role === 'user');
+                        if (firstUserMessage) {
+                            const chatTitle = firstUserMessage.content.substring(0, 50);
+                            document.title = chatTitle;
+                            // Send IPC message to update parent tab title and URL bar
+                            if (window.electronAPI && window.electronAPI.sendToHost) {
+                                window.electronAPI.sendToHost('update-title', { title: chatTitle });
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error saving chat session:', error);
+                }
             }
 
             updatePlaceholder() {

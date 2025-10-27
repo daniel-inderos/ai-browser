@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History</title>
+    <link rel="icon" type="image/svg+xml" href="favicon-light.svg" media="(prefers-color-scheme: light)">
+    <link rel="icon" type="image/svg+xml" href="favicon-dark.svg" media="(prefers-color-scheme: dark)">
+    <link rel="stylesheet" href="index.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--color-background);
+            color: var(--color-text-primary);
+        }
+
+        .history-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .history-header {
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-surface-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .history-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-text-primary);
+        }
+
+        .history-actions {
+            display: flex;
+            gap: var(--spacing-2);
+        }
+
+        .btn {
+            padding: var(--spacing-2) var(--spacing-3);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            background: var(--color-surface-elevated);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            transition: all var(--transition-fast);
+        }
+
+        .btn:hover {
+            background: var(--color-surface-hover);
+            border-color: var(--color-border-focus);
+        }
+
+        .btn-danger {
+            color: var(--color-error);
+        }
+
+        .btn-danger:hover {
+            background: var(--color-error);
+            color: var(--color-text-inverse);
+        }
+
+        .history-tabs {
+            display: flex;
+            gap: var(--spacing-1);
+            padding: var(--spacing-2) var(--spacing-4);
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-surface-elevated);
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            padding: var(--spacing-2) var(--spacing-3);
+            border: none;
+            background: transparent;
+            color: var(--color-text-tertiary);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            border-radius: var(--radius-md);
+            transition: all var(--transition-fast);
+        }
+
+        .tab-btn.active {
+            background: var(--color-surface);
+            color: var(--color-text-primary);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .history-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-4);
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-2);
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+            padding: var(--spacing-3);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            background: var(--color-surface-elevated);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .history-item:hover {
+            background: var(--color-surface-hover);
+            border-color: var(--color-border-focus);
+        }
+
+        .history-favicon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            border-radius: var(--radius-sm);
+        }
+
+        .history-content-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-title-text {
+            font-weight: var(--font-weight-medium);
+            color: var(--color-text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: var(--spacing-1);
+        }
+
+        .history-url {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-time {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-tertiary);
+            flex-shrink: 0;
+        }
+
+        .history-delete-btn {
+            padding: var(--spacing-1);
+            border: none;
+            background: transparent;
+            color: var(--color-text-tertiary);
+            cursor: pointer;
+            opacity: 0;
+            transition: all var(--transition-fast);
+            border-radius: var(--radius-sm);
+        }
+
+        .history-item:hover .history-delete-btn {
+            opacity: 1;
+        }
+
+        .history-delete-btn:hover {
+            background: var(--color-error);
+            color: var(--color-text-inverse);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--color-text-tertiary);
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-4);
+            opacity: 0.5;
+        }
+
+        .chat-preview {
+            max-height: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+            margin-top: var(--spacing-1);
+        }
+
+        .chat-item-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+            margin-bottom: var(--spacing-1);
+        }
+
+        .chat-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-primary);
+            color: var(--color-text-inverse);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-semibold);
+        }
+    </style>
+</head>
+<body>
+    <div class="history-container">
+        <div class="history-header">
+            <div class="history-title">History</div>
+            <div class="history-actions">
+                <button class="btn btn-danger" id="clearAllBtn">Clear All</button>
+            </div>
+        </div>
+        <div class="history-tabs">
+            <button class="tab-btn active" data-tab="browsing">Browsing History</button>
+            <button class="tab-btn" data-tab="chats">AI Chats</button>
+        </div>
+        <div class="history-content" id="historyContent">
+            <div class="empty-state">
+                <div class="empty-icon">📜</div>
+                <div>No history yet</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class HistoryManager {
+            constructor() {
+                this.currentTab = 'browsing';
+                this.history = [];
+                this.chats = {};
+                this.elements = {
+                    clearAllBtn: document.getElementById('clearAllBtn'),
+                    historyContent: document.getElementById('historyContent'),
+                    tabBtns: document.querySelectorAll('.tab-btn')
+                };
+                this.setupEventListeners();
+                this.loadData();
+            }
+
+            setupEventListeners() {
+                this.elements.tabBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const tab = btn.getAttribute('data-tab');
+                        this.switchTab(tab);
+                    });
+                });
+
+                this.elements.clearAllBtn.addEventListener('click', () => {
+                    this.clearAll();
+                });
+
+                // Refresh data periodically
+                setInterval(() => this.loadData(), 5000);
+            }
+
+            switchTab(tab) {
+                this.currentTab = tab;
+                this.elements.tabBtns.forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+                });
+                this.render();
+            }
+
+            async loadData() {
+                try {
+                    this.history = await window.electronAPI.loadHistory();
+                    this.chats = await window.electronAPI.loadChats();
+                    this.render();
+                } catch (error) {
+                    console.error('Error loading history:', error);
+                }
+            }
+
+            render() {
+                if (this.currentTab === 'browsing') {
+                    this.renderBrowsingHistory();
+                } else {
+                    this.renderChats();
+                }
+            }
+
+            renderBrowsingHistory() {
+                if (this.history.length === 0) {
+                    this.elements.historyContent.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🌐</div>
+                            <div>No browsing history</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const list = document.createElement('div');
+                list.className = 'history-list';
+
+                // Sort by timestamp descending
+                const sortedHistory = [...this.history].sort((a, b) => b.timestamp - a.timestamp);
+
+                sortedHistory.forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'history-item';
+                    
+                    const favicon = item.favicon 
+                        ? `<img src="${item.favicon}" class="history-favicon" />`
+                        : `<div class="history-favicon" style="background: var(--color-border);"></div>`;
+
+                    itemEl.innerHTML = `
+                        ${favicon}
+                        <div class="history-content-info">
+                            <div class="history-title-text">${this.escapeHtml(item.title)}</div>
+                            <div class="history-url">${this.escapeHtml(item.url)}</div>
+                        </div>
+                        <div class="history-time">${this.formatTime(item.timestamp)}</div>
+                        <button class="history-delete-btn" data-id="${item.id}">×</button>
+                    `;
+
+                    itemEl.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('history-delete-btn')) {
+                            window.location.href = item.url;
+                        }
+                    });
+
+                    const deleteBtn = itemEl.querySelector('.history-delete-btn');
+                    deleteBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        await window.electronAPI.deleteHistory(item.id);
+                        this.loadData();
+                    });
+
+                    list.appendChild(itemEl);
+                });
+
+                this.elements.historyContent.innerHTML = '';
+                this.elements.historyContent.appendChild(list);
+            }
+
+            renderChats() {
+                const chatEntries = Object.values(this.chats);
+                
+                if (chatEntries.length === 0) {
+                    this.elements.historyContent.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">💬</div>
+                            <div>No AI chats</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const list = document.createElement('div');
+                list.className = 'history-list';
+
+                // Sort by timestamp descending
+                const sortedChats = chatEntries.sort((a, b) => b.timestamp - a.timestamp);
+
+                sortedChats.forEach(chat => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'history-item';
+                    
+                    const firstUserMessage = chat.session.find(m => m.role === 'user');
+                    const preview = firstUserMessage ? this.escapeHtml(firstUserMessage.content.substring(0, 80)) : 'No message';
+                    const title = chat.title || 'AI Chat Session';
+
+                    itemEl.innerHTML = `
+                        <div class="chat-icon">AI</div>
+                        <div class="history-content-info">
+                            <div class="chat-item-header">
+                                <div class="history-title-text">${this.escapeHtml(title)}</div>
+                            </div>
+                            <div class="chat-preview">${preview}${preview.length >= 80 ? '...' : ''}</div>
+                        </div>
+                        <div class="history-time">${this.formatTime(chat.timestamp)}</div>
+                        <button class="history-delete-btn" data-tab-id="${chat.id}">×</button>
+                    `;
+
+                    itemEl.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('history-delete-btn')) {
+                            // Could show chat details in a modal or navigate to chat
+                            console.log('Chat clicked:', chat);
+                        }
+                    });
+
+                    const deleteBtn = itemEl.querySelector('.history-delete-btn');
+                    deleteBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        await window.electronAPI.deleteChat(chat.id);
+                        this.loadData();
+                    });
+
+                    list.appendChild(itemEl);
+                });
+
+                this.elements.historyContent.innerHTML = '';
+                this.elements.historyContent.appendChild(list);
+            }
+
+            async clearAll() {
+                if (!confirm(`Clear all ${this.currentTab === 'browsing' ? 'browsing history' : 'AI chats'}?`)) {
+                    return;
+                }
+
+                try {
+                    if (this.currentTab === 'browsing') {
+                        await window.electronAPI.clearHistory();
+                    } else {
+                        await window.electronAPI.clearChats();
+                    }
+                    this.loadData();
+                } catch (error) {
+                    console.error('Error clearing:', error);
+                }
+            }
+
+            formatTime(timestamp) {
+                const date = new Date(timestamp);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+
+                if (diffMins < 1) return 'Just now';
+                if (diffMins < 60) return `${diffMins}m ago`;
+                if (diffHours < 24) return `${diffHours}h ago`;
+                if (diffDays < 7) return `${diffDays}d ago`;
+                
+                return date.toLocaleDateString();
+            }
+
+            escapeHtml(str) {
+                return str.replace(/[&<>"']/g, (match) => {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    }[match];
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new HistoryManager();
+        });
+    </script>
+</body>
+</html>
+

@@ -5,6 +5,7 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('node:path');
 const { initialize, enable } = require('@electron/remote/main');
 const { streamChat } = require('./openaiHelper');
+const storageHelper = require('./storageHelper');
 
 // Initialize @electron/remote
 initialize();
@@ -99,8 +100,15 @@ ipcMain.handle('get-page-title', async (event, webContentsId) => {
 
 ipcMain.handle('navigate-to', async (event, url) => {
   try {
-    if (url === 'newtab.html') {
-      url = `file://${path.join(__dirname, 'newtab.html')}`;
+    if (url.includes('newtab.html')) {
+      // Extract query parameters if present
+      const urlParts = url.split('?');
+      const queryParams = urlParts.length > 1 ? '?' + urlParts[1] : '';
+      url = `file://${path.join(__dirname, 'newtab.html')}${queryParams}`;
+      return { success: true, url };
+    }
+    if (url.includes('history.html')) {
+      url = `file://${path.join(__dirname, 'history.html')}`;
       return { success: true, url };
     }
     // Basic URL validation and formatting
@@ -147,6 +155,45 @@ ipcMain.handle('chat-send', async (event, { id, messages, contexts }) => {
     event.sender.send('chat-stream', { id, error: error.message });
     return { success: false, error: error.message };
   }
+});
+
+// History IPC handlers
+ipcMain.handle('history-load', async () => {
+  return storageHelper.loadHistory();
+});
+
+ipcMain.handle('history-add', async (event, { url, title, favicon }) => {
+  return storageHelper.addHistoryEntry(url, title, favicon);
+});
+
+ipcMain.handle('history-delete', async (event, id) => {
+  storageHelper.deleteHistoryEntry(id);
+  return { success: true };
+});
+
+ipcMain.handle('history-clear', async () => {
+  storageHelper.clearHistory();
+  return { success: true };
+});
+
+// Chat IPC handlers
+ipcMain.handle('chats-load', async () => {
+  return storageHelper.loadChats();
+});
+
+ipcMain.handle('chat-save', async (event, { tabId, session }) => {
+  storageHelper.saveChatSession(tabId, session);
+  return { success: true };
+});
+
+ipcMain.handle('chat-delete', async (event, tabId) => {
+  storageHelper.deleteChatSession(tabId);
+  return { success: true };
+});
+
+ipcMain.handle('chats-clear', async () => {
+  storageHelper.clearAllChats();
+  return { success: true };
 });
 
 
@@ -264,6 +311,16 @@ const createMenu = () => {
           click: () => {
             if (mainWindow) {
               mainWindow.webContents.send('toggle-sidebar');
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'History',
+          accelerator: 'CmdOrCtrl+Y',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('show-history');
             }
           }
         },

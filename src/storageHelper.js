@@ -1,0 +1,139 @@
+const fs = require('fs');
+const path = require('path');
+const { app } = require('electron');
+
+const STORAGE_DIR = path.join(app.getPath('userData'), 'storage');
+const HISTORY_FILE = path.join(STORAGE_DIR, 'history.json');
+const CHATS_FILE = path.join(STORAGE_DIR, 'chats.json');
+
+// Ensure storage directory exists
+function ensureStorageDir() {
+  if (!fs.existsSync(STORAGE_DIR)) {
+    fs.mkdirSync(STORAGE_DIR, { recursive: true });
+  }
+}
+
+// History management
+function loadHistory() {
+  ensureStorageDir();
+  try {
+    if (fs.existsSync(HISTORY_FILE)) {
+      const data = fs.readFileSync(HISTORY_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading history:', error);
+  }
+  return [];
+}
+
+function saveHistory(history) {
+  ensureStorageDir();
+  try {
+    // Keep only last 5000 items
+    const limitedHistory = history.slice(-5000);
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(limitedHistory, null, 2));
+  } catch (error) {
+    console.error('Error saving history:', error);
+  }
+}
+
+function addHistoryEntry(url, title, favicon = '') {
+  const history = loadHistory();
+  const entry = {
+    id: Date.now().toString(),
+    url,
+    title,
+    favicon,
+    timestamp: Date.now()
+  };
+  history.push(entry);
+  saveHistory(history);
+  return entry;
+}
+
+function deleteHistoryEntry(id) {
+  const history = loadHistory();
+  const filtered = history.filter(item => item.id !== id);
+  saveHistory(filtered);
+}
+
+function clearHistory() {
+  ensureStorageDir();
+  try {
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify([], null, 2));
+  } catch (error) {
+    console.error('Error clearing history:', error);
+  }
+}
+
+// Chat management
+function loadChats() {
+  ensureStorageDir();
+  try {
+    if (fs.existsSync(CHATS_FILE)) {
+      const data = fs.readFileSync(CHATS_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading chats:', error);
+  }
+  return {};
+}
+
+function saveChats(chats) {
+  ensureStorageDir();
+  try {
+    fs.writeFileSync(CHATS_FILE, JSON.stringify(chats, null, 2));
+  } catch (error) {
+    console.error('Error saving chats:', error);
+  }
+}
+
+function saveChatSession(tabId, session) {
+  const chats = loadChats();
+  if (session && session.length > 0) {
+    // Find the first user message to use as the title
+    const firstUserMessage = session.find(msg => msg.role === 'user');
+    const title = firstUserMessage ? firstUserMessage.content.substring(0, 100) : 'AI Chat Session';
+    
+    chats[tabId] = {
+      id: tabId,
+      session,
+      title,
+      timestamp: Date.now()
+    };
+  } else {
+    delete chats[tabId];
+  }
+  saveChats(chats);
+}
+
+function deleteChatSession(tabId) {
+  const chats = loadChats();
+  delete chats[tabId];
+  saveChats(chats);
+}
+
+function clearAllChats() {
+  ensureStorageDir();
+  try {
+    fs.writeFileSync(CHATS_FILE, JSON.stringify({}, null, 2));
+  } catch (error) {
+    console.error('Error clearing chats:', error);
+  }
+}
+
+module.exports = {
+  loadHistory,
+  saveHistory,
+  addHistoryEntry,
+  deleteHistoryEntry,
+  clearHistory,
+  loadChats,
+  saveChats,
+  saveChatSession,
+  deleteChatSession,
+  clearAllChats
+};
+

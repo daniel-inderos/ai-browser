@@ -13,6 +13,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendChat: (id, messages, contexts) => ipcRenderer.invoke('chat-send', { id, messages, contexts }),
   onChatStream: (callback) => ipcRenderer.on('chat-stream', (_e, data) => callback(data)),
 
+  // History
+  loadHistory: () => ipcRenderer.invoke('history-load'),
+  addHistory: (url, title, favicon) => ipcRenderer.invoke('history-add', { url, title, favicon }),
+  deleteHistory: (id) => ipcRenderer.invoke('history-delete', id),
+  clearHistory: () => ipcRenderer.invoke('history-clear'),
+
+  // Chats
+  loadChats: () => ipcRenderer.invoke('chats-load'),
+  saveChat: (tabId, session) => ipcRenderer.invoke('chat-save', { tabId, session }),
+  deleteChat: (tabId) => ipcRenderer.invoke('chat-delete', tabId),
+  clearChats: () => ipcRenderer.invoke('chats-clear'),
+
   // Navigation events
   onNewTab: (callback) => ipcRenderer.on('new-tab', callback),
   onCloseTab: (callback) => ipcRenderer.on('close-tab', callback),
@@ -23,6 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onToggleChat: (callback) => ipcRenderer.on('toggle-chat', callback),
   onToggleSidebar: (callback) => ipcRenderer.on('toggle-sidebar', callback),
   onSelectTab: (callback) => ipcRenderer.on('select-tab', (_e, data) => callback(data)),
+  onShowHistory: (callback) => ipcRenderer.on('show-history', callback),
 
   // Remove listeners
   removeListener: (channel, callback) => ipcRenderer.removeListener(channel, callback),

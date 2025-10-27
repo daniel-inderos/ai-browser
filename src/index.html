@@ -753,6 +753,7 @@
                 window.electronAPI.onToggleSidebar(() => this.toggleSidebarCollapse());
                 // Tab numeric selection from menu accelerators
                 window.electronAPI.onSelectTab(({ index }) => this.selectTabByNumber(index));
+                window.electronAPI.onShowHistory(() => this.showHistory());
 
                 // Window resize handling
                 window.addEventListener('resize', this.debounce(() => {
@@ -788,6 +789,10 @@
                             case 's':
                                 e.preventDefault();
                                 this.toggleSidebarCollapse();
+                                break;
+                            case 'y':
+                                e.preventDefault();
+                                this.showHistory();
                                 break;
                             default: {
                                 // Number keys 1-9 to switch tabs like Chrome
@@ -878,6 +883,22 @@
                 // Use empty src initially; will update once favicon arrives
                 tabFavicon.alt = '';
                 
+                // Helper to set AI logo for newtab.html
+                const setAIIcon = () => {
+                    // Detect dark mode
+                    const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    const iconColor = isDarkMode ? '#60A5FA' : '#2563EB'; // Blue-400 for dark, Blue-600 for light
+                    
+                    // AI sparkle icon - represents AI intelligence
+                    const aiIconSVG = 'data:image/svg+xml,' + encodeURIComponent(`
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="${iconColor}"/>
+                        </svg>
+                    `);
+                    tabFavicon.src = aiIconSVG;
+                    if (tab.railFavicon) tab.railFavicon.src = aiIconSVG;
+                };
+                
                 // Helper to set favicon through fallback when direct event missing
                 const updateFaviconFallback = async () => {
                     try {
@@ -898,13 +919,19 @@
                             tabFavicon.src = iconUrl;
                             if (tab.railFavicon) tab.railFavicon.src = iconUrl;
                         } else {
-                            // Use Google favicon service as final fallback
-                            try {
-                                const pageOrigin = new URL(webview.getURL()).origin;
-                                const fallback = `https://www.google.com/s2/favicons?sz=32&domain_url=${encodeURIComponent(pageOrigin)}`;
-                                tabFavicon.src = fallback;
-                                if (tab.railFavicon) tab.railFavicon.src = fallback;
-                            } catch (err) {}
+                            // Check if this is newtab.html and use AI icon
+                            const currentUrl = webview.getURL();
+                            if (currentUrl && currentUrl.includes('newtab.html')) {
+                                setAIIcon();
+                            } else {
+                                // Use Google favicon service as final fallback
+                                try {
+                                    const pageOrigin = new URL(webview.getURL()).origin;
+                                    const fallback = `https://www.google.com/s2/favicons?sz=32&domain_url=${encodeURIComponent(pageOrigin)}`;
+                                    tabFavicon.src = fallback;
+                                    if (tab.railFavicon) tab.railFavicon.src = fallback;
+                                } catch (err) {}
+                            }
                         }
                     } catch (err) {
                         console.error('Failed to fetch favicon via fallback:', err);
@@ -1008,6 +1035,11 @@
                 if (result.success) {
                   tab.url = result.url;
                   webview.setAttribute('src', result.url); // Set src instead of loadURL
+                  
+                  // Set AI icon immediately for newtab.html
+                  if (result.url.includes('newtab.html')) {
+                      setAIIcon();
+                  }
                 } else {
                   console.error('Navigation failed:', result.error);
                 }
@@ -1057,6 +1089,36 @@
                         if (channel === 'new-tab-chat-send') {
                             const data = { type: 'new-tab-chat-send', ...arg };
                             this.handleNewTabChat(data, tab);
+                        }
+                        if (channel === 'update-title') {
+                            // Update tab title and URL bar when newtab sends title update
+                            const newTitle = arg.title || 'New Tab';
+                            tab.title = newTitle;
+                            if (tab.tabTitle) {
+                                tab.tabTitle.textContent = newTitle;
+                                tab.tabTitle.setAttribute('title', newTitle);
+                            }
+                            if (tab.railTitle) {
+                                tab.railTitle.textContent = newTitle;
+                                tab.railTitle.setAttribute('title', newTitle);
+                            }
+                            if (this.activeTabId === tab.id) {
+                                this.urlBar.value = newTitle;
+                            }
+                            // Ensure AI icon is set for newtab
+                            if (tab.url && tab.url.includes('newtab.html')) {
+                                // Detect dark mode
+                                const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                                const iconColor = isDarkMode ? '#60A5FA' : '#2563EB'; // Blue-400 for dark, Blue-600 for light
+                                
+                                const aiIconSVG = 'data:image/svg+xml,' + encodeURIComponent(`
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="${iconColor}"/>
+                                    </svg>
+                                `);
+                                if (tab.tabFavicon) tab.tabFavicon.src = aiIconSVG;
+                                if (tab.railFavicon) tab.railFavicon.src = aiIconSVG;
+                            }
                         }
                         if (channel === 'shortcut') {
                             switch (arg.command) {
@@ -1161,6 +1223,13 @@
                     if (!tabFavicon.src) {
                         await updateFaviconFallback();
                     }
+                    
+                    // Save to history
+                    const currentUrl = webview.getURL();
+                    if (currentUrl && currentUrl.startsWith('http')) {
+                        this.saveHistoryEntry(currentUrl, finalTitle, tabFavicon.src || '');
+                    }
+                    
                     if (this.activeTabId === tabId) {
                         this.hideLoading();
                     }
@@ -1170,6 +1239,7 @@
                 tab.webview = webview;
                 tab.tabElement = tabElement;
                 tab.tabTitle = tabTitle;
+                tab.tabFavicon = tabFavicon;
 
                 this.tabs.push(tab);
                 // Initialize empty chat session for this tab
@@ -1369,22 +1439,10 @@
                     this.hideCommandPalette();
                     await this.createTab(targetUrl);
                 } else {
-                    // Ask mode: create new tab with Google and open chat sidebar
+                    // Ask mode: navigate to newtab.html with ask mode and optional query
                     this.hideCommandPalette();
-                    const userQuestion = value; // Save the question if user typed one
-                    const tab = await this.createTab('https://www.google.com');
-                    
-                    // Wait a bit for tab to be ready, then open chat sidebar
-                    setTimeout(() => {
-                        if (tab && tab.id === this.activeTabId) {
-                            this.showChatSidebar();
-                            // If user typed a question, pre-fill it
-                            if (userQuestion) {
-                                this.chatInput.value = userQuestion;
-                                this.chatInput.focus();
-                            }
-                        }
-                    }, 300);
+                    const queryParam = value ? `&query=${encodeURIComponent(value)}` : '';
+                    await this.createTab(`newtab.html?mode=ask${queryParam}`);
                 }
             }
 
@@ -1588,6 +1646,8 @@
                                 contentEl.innerHTML = this.marked.parse(assistantMessage.content);
                             }
                         }
+                        // Save chat session after completion
+                        this.saveChatSession(tabId);
                         window.electronAPI.removeListener('chat-stream', streamHandler);
                     } else if (data.error) {
                         assistantMessage.content = `Error: ${data.error}`;
@@ -1652,6 +1712,8 @@
                                 contentEl.innerHTML = this.marked.parse(assistantMessage.content);
                             }
                         }
+                        // Save chat session after completion
+                        this.saveChatSession(tabId);
                         window.electronAPI.removeListener('chat-stream', streamHandler);
                     } else if (data.error) {
                         assistantMessage.content = `Error: ${data.error}`;
@@ -1788,6 +1850,8 @@
                     tab.referencedTabs.add(tab.id);
                     this.updateChatContextUI(tab);
                 }
+                // Save empty session to clear stored chat
+                this.saveChatSession(this.activeTabId);
             }
 
             handleChatInput() {
@@ -1888,6 +1952,41 @@
                         this.updateChatContextUI(activeTab);
                     });
                 });
+            }
+
+            async showHistory() {
+                // Create or switch to history tab
+                const historyUrl = 'history.html';
+                const existingTab = this.tabs.find(t => t.url && t.url.includes('history.html'));
+                
+                if (existingTab) {
+                    this.switchToTab(existingTab.id);
+                } else {
+                    await this.createTab(historyUrl);
+                }
+            }
+
+            async saveHistoryEntry(url, title, favicon) {
+                try {
+                    // Skip internal pages
+                    if (url.includes('history.html') || url.includes('newtab.html')) {
+                        return;
+                    }
+                    await window.electronAPI.addHistory(url, title, favicon);
+                } catch (error) {
+                    console.error('Error saving history:', error);
+                }
+            }
+
+            async saveChatSession(tabId) {
+                try {
+                    const session = this.chatSessions.get(tabId);
+                    if (session && session.length > 0) {
+                        await window.electronAPI.saveChat(tabId, session);
+                    }
+                } catch (error) {
+                    console.error('Error saving chat session:', error);
+                }
             }
         }
 
