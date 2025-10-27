@@ -16,6 +16,16 @@
         <!-- Left Tab Rail -->
         <aside class="tab-rail" aria-label="Tab Sidebar">
             <div class="tab-rail-header">
+                <div class="incognito-indicator" id="incognitoIndicator" style="display: none;" title="Incognito Mode - Your browsing history won't be saved">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- Sunglasses icon for incognito -->
+                        <circle cx="7" cy="10" r="4" fill="currentColor" opacity="0.2"/>
+                        <circle cx="17" cy="10" r="4" fill="currentColor" opacity="0.2"/>
+                        <path d="M11 10h2"/>
+                        <path d="M3 14c0 2 1.5 3 4 3h10c2.5 0 4-1 4-3"/>
+                    </svg>
+                    <span class="incognito-text">Incognito</span>
+                </div>
             </div>
             <div class="rail-url">
                 <div class="rail-url-controls">
@@ -204,6 +214,32 @@
                 if (this.summarizeBtn) {
                     this.summarizeBtn.style.display = 'flex';
                 }
+                
+                // Show incognito indicator if in incognito mode (async)
+                this.checkIncognitoMode();
+            }
+            
+            async checkIncognitoMode() {
+                console.log('Checking incognito mode...');
+                try {
+                    const isIncognitoMode = await window.electronAPI.isIncognito();
+                    console.log('isIncognito result:', isIncognitoMode);
+                    
+                    // Cache the incognito state
+                    this.isIncognito = isIncognitoMode;
+                    
+                    if (isIncognitoMode && this.incognitoIndicator) {
+                        console.log('Showing incognito indicator');
+                        this.incognitoIndicator.style.display = 'flex';
+                        // Update window title to show incognito mode
+                        document.title = 'AI Browser (Incognito)';
+                    } else {
+                        console.log('NOT showing incognito indicator. isIncognito:', isIncognitoMode, 'indicator exists:', !!this.incognitoIndicator);
+                    }
+                } catch (error) {
+                    console.error('Error checking incognito mode:', error);
+                    this.isIncognito = false;
+                }
             }
 
             getDisplayUrl(url) {
@@ -239,6 +275,7 @@
                 this.chatSidebarResizer = document.getElementById('chatSidebarResizer');
                 this.tabRail = document.querySelector('.tab-rail');
                 this.hoverTriggerZone = document.getElementById('hoverTriggerZone');
+                this.incognitoIndicator = document.getElementById('incognitoIndicator');
                 // Command palette elements
                 this.commandPaletteBackdrop = document.getElementById('commandPaletteBackdrop');
                 this.commandPaletteInput = document.getElementById('commandPaletteInput');
@@ -1034,7 +1071,9 @@
                 webview.setAttribute('webpreferences', 'contextIsolation=true');
                 webview.setAttribute('preload', `file://${preloadPath}`);
                 webview.setAttribute('useragent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 AI-Browser/1.0');
-                webview.setAttribute('partition', 'persist:browser');
+                // Use the partition from the parent window (shared across all tabs in incognito)
+                const partition = await window.electronAPI.getPartition();
+                webview.setAttribute('partition', partition);
                 const result = await window.electronAPI.navigateTo(url);
                 console.log('navigateTo result:', result);
                 if (result.success) {
@@ -1973,6 +2012,10 @@
 
             async saveHistoryEntry(url, title, favicon) {
                 try {
+                    // Don't save history in incognito mode
+                    if (this.isIncognito) {
+                        return;
+                    }
                     // Skip internal pages
                     if (url.includes('history.html') || url.includes('newtab.html')) {
                         return;
@@ -1985,6 +2028,10 @@
 
             async saveChatSession(tabId) {
                 try {
+                    // Don't save chat sessions in incognito mode
+                    if (this.isIncognito) {
+                        return;
+                    }
                     const session = this.chatSessions.get(tabId);
                     if (session && session.length > 0) {
                         await window.electronAPI.saveChat(tabId, session);

@@ -19,10 +19,13 @@ console.log('App initialization starting...');
 
 let mainWindow;
 
-const createWindow = () => {
-  console.log('Creating browser window...');
+const createWindow = (isIncognito = false) => {
+  console.log(`Creating ${isIncognito ? 'incognito' : 'browser'} window...`);
+  // Create a unique partition for incognito windows to ensure ephemeral session
+  const partition = isIncognito ? `incognito-${Date.now()}`  : 'persist:browser';
+  
   // Create the browser window.
-  mainWindow = new BrowserWindow({
+  const newWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     webPreferences: {
@@ -31,58 +34,84 @@ const createWindow = () => {
       contextIsolation: true,
       webSecurity: true,
       webviewTag: true, // Enable webview tags
+      partition: partition, // Use partition for session management
     },
     frame: false,
     titleBarStyle: 'hidden',
     show: false, // Don't show until ready
   });
+  
+  // Store partition on window object for webview access
+  newWindow.incognitoPartition = partition;
 
   console.log('Window created, enabling remote module...');
   // Enable remote module for this window
-  enable(mainWindow.webContents);
+  enable(newWindow.webContents);
+  
+  // Store incognito state on window for IPC access
+  newWindow.isIncognito = isIncognito;
 
   console.log('Loading browser interface...');
   // Load the browser interface
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  newWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // Show window when ready
-  mainWindow.once('ready-to-show', () => {
+  newWindow.once('ready-to-show', () => {
     console.log('Window ready to show, displaying...');
-    mainWindow.show();
+    newWindow.show();
   });
 
   // Handle renderer process errors
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+  newWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
     console.error('Failed to load:', errorCode, errorDescription);
   });
 
-  mainWindow.webContents.on('crashed', () => {
+  newWindow.webContents.on('crashed', () => {
     console.error('Renderer process crashed');
   });
 
-  mainWindow.webContents.on('unresponsive', () => {
+  newWindow.webContents.on('unresponsive', () => {
     console.error('Renderer process unresponsive');
   });
 
   // Handle JavaScript errors
-  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+  newWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`Renderer console [${level}]: ${message} at ${sourceId}:${line}`);
   });
 
   // Handle uncaught exceptions
-  mainWindow.webContents.on('did-fail-provisional-load', (event, errorCode, errorDescription) => {
+  newWindow.webContents.on('did-fail-provisional-load', (event, errorCode, errorDescription) => {
     console.error('Provisional load failed:', errorCode, errorDescription);
   });
 
   // Handle window closed
-  mainWindow.on('closed', () => {
-    console.log('Main window closed');
-    mainWindow = null;
+  newWindow.on('closed', () => {
+    console.log('Window closed');
+    if (newWindow === mainWindow) {
+      mainWindow = null;
+    }
   });
+
+  // Set mainWindow if this is the first window
+  if (!mainWindow && !isIncognito) {
+    mainWindow = newWindow;
+  }
+
+  return newWindow;
 };
 
 ipcMain.handle('get-preload-path', () => {
   return path.join(__dirname, 'preload.js');
+});
+
+ipcMain.handle('is-incognito', (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  return window ? window.isIncognito || false : false;
+});
+
+ipcMain.handle('get-partition', (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  return window ? window.incognitoPartition || 'persist:browser' : 'persist:browser';
 });
 
 // IPC handlers for tab management
@@ -207,17 +236,26 @@ const createMenu = () => {
           label: 'New Tab',
           accelerator: 'CmdOrCtrl+T',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('new-tab');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('new-tab');
             }
+          }
+        },
+        {
+          label: 'New Incognito Window',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: () => {
+            createWindow(true);
           }
         },
         {
           label: 'Close Tab',
           accelerator: 'CmdOrCtrl+W',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('close-tab');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('close-tab');
             }
           }
         },
@@ -263,8 +301,9 @@ const createMenu = () => {
           label: 'Back',
           accelerator: 'Alt+Left',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('navigate-back');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('navigate-back');
             }
           }
         },
@@ -272,8 +311,9 @@ const createMenu = () => {
           label: 'Forward',
           accelerator: 'Alt+Right',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('navigate-forward');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('navigate-forward');
             }
           }
         },
@@ -281,8 +321,9 @@ const createMenu = () => {
           label: 'Refresh',
           accelerator: 'CmdOrCtrl+R',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('refresh-page');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('refresh-page');
             }
           }
         },
@@ -291,8 +332,9 @@ const createMenu = () => {
           label: 'Focus Address Bar',
           accelerator: 'CmdOrCtrl+L',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('focus-url');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('focus-url');
             }
           }
         },
@@ -300,8 +342,9 @@ const createMenu = () => {
           label: 'Toggle AI Chat',
           accelerator: 'CmdOrCtrl+E',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('toggle-chat');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('toggle-chat');
             }
           }
         },
@@ -309,8 +352,9 @@ const createMenu = () => {
           label: 'Toggle Sidebar',
           accelerator: 'CmdOrCtrl+S',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('toggle-sidebar');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('toggle-sidebar');
             }
           }
         },
@@ -319,8 +363,9 @@ const createMenu = () => {
           label: 'History',
           accelerator: 'CmdOrCtrl+Y',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('show-history');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('show-history');
             }
           }
         },
@@ -330,8 +375,9 @@ const createMenu = () => {
           label: i === 8 ? 'Switch to Last Tab' : `Switch to Tab ${i + 1}`,
           accelerator: `CmdOrCtrl+${i + 1}`,
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('select-tab', { index: i + 1 });
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('select-tab', { index: i + 1 });
             }
           }
         }))

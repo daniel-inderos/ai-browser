@@ -3,6 +3,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Incognito detection - use IPC to get from main process
+  isIncognito: () => ipcRenderer.invoke('is-incognito'),
+  getPartition: () => ipcRenderer.invoke('get-partition'),
+  
   // Tab management
   createTab: (url) => ipcRenderer.invoke('create-tab', url),
   getPageTitle: (webContentsId) => ipcRenderer.invoke('get-page-title', webContentsId),
