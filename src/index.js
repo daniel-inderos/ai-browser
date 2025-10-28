@@ -122,6 +122,14 @@ ipcMain.handle('create-tab', async (event, url = 'https://www.google.com') => {
   return { url, id: Date.now().toString() };
 });
 
+// IPC handler for opening links in new tabs
+ipcMain.on('open-link-in-tab', (event, url) => {
+  console.log('IPC: Opening link in new tab:', url);
+  if (event.sender) {
+    event.sender.send('open-in-tab', url);
+  }
+});
+
 ipcMain.handle('get-page-title', async (event, webContentsId) => {
   const webContents = require('electron').webContents.fromId(webContentsId);
   return webContents ? webContents.getTitle() : 'New Tab';

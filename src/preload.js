@@ -47,5 +47,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Host messaging for webview guests
   sendToHost: (type, payload) => ipcRenderer.sendToHost(type, payload),
-  onFromHost: (callback) => ipcRenderer.on('guest-message', (_e, data) => callback(data))
+  onFromHost: (callback) => ipcRenderer.on('guest-message', (_e, data) => callback(data)),
+  
+  // Link handling for webviews
+  openLinkInNewTab: (url) => ipcRenderer.sendToHost('open-link', { url }),
+  
+  // Listen for IPC messages from main process
+  onOpenInTab: (callback) => ipcRenderer.on('open-in-tab', (_e, url) => callback(url))
 });

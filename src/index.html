@@ -246,6 +246,65 @@
                 return url || '';
             }
 
+            injectLinkHandlerScript(webview) {
+                try {
+                    // Inject script to handle middle click and Ctrl+Click
+                    webview.executeJavaScript(`
+                        (function() {
+                            // Check if already injected to avoid duplicate handlers
+                            if (window.__linkHandlerInjected) return;
+                            window.__linkHandlerInjected = true;
+                            
+                            console.log('Link handler script injected');
+                            
+                            // Capture mousedown event FIRST to intercept middle-click before any other handlers
+                            document.addEventListener('mousedown', function(e) {
+                                // Middle click (button === 1)
+                                if (e.button === 1) {
+                                    const link = e.target.closest('a');
+                                    if (link && link.href && !link.href.startsWith('javascript:')) {
+                                        console.log('Middle-click detected on link:', link.href);
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.stopImmediatePropagation();
+                                        
+                                        // Try to use electronAPI if available
+                                        if (window.electronAPI && window.electronAPI.openLinkInNewTab) {
+                                            window.electronAPI.openLinkInNewTab(link.href);
+                                        }
+                                        return false;
+                                    }
+                                    // Prevent middle click scrolling on non-links
+                                    e.preventDefault();
+                                    return false;
+                                }
+                            }, true); // Use capture phase for early interception
+                            
+                            // Also handle click events for Ctrl/Cmd+Click
+                            document.addEventListener('click', function(e) {
+                                // Ctrl+Click or Cmd+Click
+                                if ((e.ctrlKey || e.metaKey) && e.button === 0) {
+                                    const link = e.target.closest('a');
+                                    if (link && link.href && !link.href.startsWith('javascript:')) {
+                                        console.log('Ctrl+Click detected on link:', link.href);
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.stopImmediatePropagation();
+                                        
+                                        if (window.electronAPI && window.electronAPI.openLinkInNewTab) {
+                                            window.electronAPI.openLinkInNewTab(link.href);
+                                        }
+                                        return false;
+                                    }
+                                }
+                            }, true); // Use capture phase
+                        })();
+                    `);
+                } catch (err) {
+                    console.error('Error injecting link handler:', err);
+                }
+            }
+
             initializeElements() {
                 this.tabsContainer = document.getElementById('tabsContainer');
                 this.newTabBtn = document.getElementById('railNewTabBtn');
@@ -796,6 +855,12 @@
                 // Tab numeric selection from menu accelerators
                 window.electronAPI.onSelectTab(({ index }) => this.selectTabByNumber(index));
                 window.electronAPI.onShowHistory(() => this.showHistory());
+                
+                // Listen for IPC messages to open links in tabs
+                window.electronAPI.onOpenInTab((url) => {
+                    console.log('Received open-in-tab IPC:', url);
+                    this.createTab(url);
+                });
 
                 // Window resize handling
                 window.addEventListener('resize', this.debounce(() => {
@@ -1067,13 +1132,44 @@
                 const webview = document.createElement('webview');
                 webview.style.display = 'none';
                 // Note: removed webview.src = url;
-                webview.setAttribute('allowpopups', '');
+                // NOTE: Removed 'allowpopups' attribute - we handle new windows ourselves
                 webview.setAttribute('webpreferences', 'contextIsolation=true');
                 webview.setAttribute('preload', `file://${preloadPath}`);
                 webview.setAttribute('useragent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 AI-Browser/1.0');
                 // Use the partition from the parent window (shared across all tabs in incognito)
                 const partition = await window.electronAPI.getPartition();
                 webview.setAttribute('partition', partition);
+                
+                // Handle new window requests BEFORE navigation starts
+                webview.addEventListener('new-window', (e) => {
+                    console.log('new-window event triggered:', e.url);
+                    e.preventDefault();
+                    if (e.url) {
+                        this.createTab(e.url);
+                    }
+                });
+                
+                // Also handle window.open calls
+                webview.addEventListener('did-attach', () => {
+                    try {
+                        webview.executeJavaScript(`
+                            (function() {
+                                const originalOpen = window.open;
+                                window.open = function(url, name, features) {
+                                    console.log('window.open intercepted:', url);
+                                    if (window.electronAPI && window.electronAPI.openLinkInNewTab) {
+                                        window.electronAPI.openLinkInNewTab(url);
+                                        return null;
+                                    }
+                                    return originalOpen.call(window, url, name, features);
+                                };
+                            })();
+                        `);
+                    } catch (err) {
+                        console.error('Error intercepting window.open:', err);
+                    }
+                });
+                
                 const result = await window.electronAPI.navigateTo(url);
                 console.log('navigateTo result:', result);
                 if (result.success) {
@@ -1109,6 +1205,9 @@
                                 this.summarizeBtn.style.display = 'flex';
                             }
                         }
+                        
+                        // Inject link handler script when DOM is ready
+                        this.injectLinkHandlerScript(webview);
                     } catch (error) {
                         console.error('Error in dom-ready handler:', error);
                     }
@@ -1133,6 +1232,13 @@
                         if (channel === 'new-tab-chat-send') {
                             const data = { type: 'new-tab-chat-send', ...arg };
                             this.handleNewTabChat(data, tab);
+                        }
+                        if (channel === 'open-link') {
+                            // Handle link opening in new tab (middle click, Ctrl+Click)
+                            console.log('open-link message received:', arg.url);
+                            if (arg.url) {
+                                this.createTab(arg.url);
+                            }
                         }
                         if (channel === 'update-title') {
                             // Update tab title and URL bar when newtab sends title update
