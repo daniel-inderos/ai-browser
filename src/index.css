@@ -1389,8 +1389,13 @@ webview {
     flex-shrink: 0;
 }
 
-.command-palette-input {
+.command-palette-input-wrapper {
     flex: 1;
+    position: relative;
+}
+
+.command-palette-input {
+    width: 100%;
     padding: var(--spacing-2) var(--spacing-2);
     font-size: 0.95rem;
     line-height: 1.4;
@@ -1401,6 +1406,29 @@ webview {
     box-sizing: border-box;
     font-family: var(--font-family-primary);
     font-weight: var(--font-weight-normal);
+    position: relative;
+    z-index: 2;
+}
+
+.command-palette-autocomplete {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: var(--spacing-2) var(--spacing-2);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    border: none;
+    background: transparent;
+    color: var(--color-text-tertiary);
+    font-family: var(--font-family-primary);
+    font-weight: var(--font-weight-normal);
+    white-space: nowrap;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+    box-sizing: border-box;
+    display: none;
 }
 
 .command-palette-input::placeholder {

@@ -168,14 +168,17 @@
                         Ask
                     </button>
                 </div>
-                <input 
-                    type="text" 
-                    class="command-palette-input" 
-                    id="commandPaletteInput" 
-                    placeholder="Search or Enter URL..."
-                    autocomplete="off"
-                    spellcheck="false"
-                />
+                <div class="command-palette-input-wrapper">
+                    <input 
+                        type="text" 
+                        class="command-palette-input" 
+                        id="commandPaletteInput" 
+                        placeholder="Search or Enter URL..."
+                        autocomplete="off"
+                        spellcheck="false"
+                    />
+                    <div class="command-palette-autocomplete" id="commandPaletteAutocomplete"></div>
+                </div>
             </div>
             <div class="command-palette-results" id="commandPaletteResults"></div>
         </div>
@@ -198,6 +201,7 @@
                 this.stopSidebarResize = this.stopSidebarResize.bind(this);
                 this.sidebarCollapsed = false;
                 this.sidebarHoveredWhileCollapsed = false;
+                this.history = []; // Browser history for suggestions
                 
                 this.initializeElements();
                 this.setupResizableSidebars();
@@ -217,6 +221,9 @@
                 
                 // Show incognito indicator if in incognito mode (async)
                 this.checkIncognitoMode();
+                
+                // Load history for command palette suggestions
+                this.loadHistory();
             }
             
             async checkIncognitoMode() {
@@ -338,11 +345,15 @@
                 // Command palette elements
                 this.commandPaletteBackdrop = document.getElementById('commandPaletteBackdrop');
                 this.commandPaletteInput = document.getElementById('commandPaletteInput');
+                this.commandPaletteAutocomplete = document.getElementById('commandPaletteAutocomplete');
                 this.commandPaletteResults = document.getElementById('commandPaletteResults');
                 this.commandPaletteModeSearch = document.getElementById('commandPaletteModeSearch');
                 this.commandPaletteModeAsk = document.getElementById('commandPaletteModeAsk');
                 this.commandPaletteMode = 'search'; // Default mode
                 this.selectedResultIndex = -1;
+                this.currentResults = []; // Store current results for autocomplete
+                this.isNavigatingResults = false; // Flag to prevent input reset during navigation
+                this.autocompleteText = ''; // Current autocomplete suggestion
 
                 // Listen for messages from webviews
                 window.addEventListener('message', (e) => {
@@ -767,13 +778,23 @@
                 });
                 
                 this.commandPaletteInput.addEventListener('input', () => {
-                    this.updateCommandPaletteResults();
+                    // Reset selection when user types (but not when navigating with arrow keys)
+                    if (!this.isNavigatingResults) {
+                        this.selectedResultIndex = -1;
+                        this.updateCommandPaletteResults();
+                    }
                 });
                 
                 this.commandPaletteInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        this.executeCommandPaletteAction();
+                        // If a result is selected, execute that specific result
+                        if (this.selectedResultIndex >= 0 && this.currentResults.length > 0) {
+                            const selectedResult = this.currentResults[this.selectedResultIndex];
+                            this.executeSelectedResult(selectedResult);
+                        } else {
+                            this.executeCommandPaletteAction();
+                        }
                     } else if (e.key === 'Escape') {
                         e.preventDefault();
                         this.hideCommandPalette();
@@ -783,11 +804,33 @@
                     } else if (e.key === 'ArrowUp') {
                         e.preventDefault();
                         this.selectPreviousResult();
-                    } else if (e.key === 'Tab') {
+                    } else if (e.key === 'Tab' && e.shiftKey) {
                         e.preventDefault();
-                        // Switch between Search and Ask modes
+                        // Shift+Tab switches between Search and Ask modes
                         const newMode = this.commandPaletteMode === 'search' ? 'ask' : 'search';
                         this.setCommandPaletteMode(newMode);
+                    } else if (e.key === 'Tab') {
+                        e.preventDefault();
+                        // Accept autocomplete if available
+                        if (this.autocompleteText) {
+                            this.commandPaletteInput.value = this.autocompleteText;
+                            this.hideAutocomplete();
+                            // Move cursor to end
+                            setTimeout(() => {
+                                this.commandPaletteInput.setSelectionRange(this.autocompleteText.length, this.autocompleteText.length);
+                            }, 0);
+                        }
+                    } else if (e.key === 'ArrowRight') {
+                        // Accept autocomplete with right arrow if available
+                        if (this.autocompleteText && this.commandPaletteInput.selectionStart === this.commandPaletteInput.value.length) {
+                            e.preventDefault();
+                            this.commandPaletteInput.value = this.autocompleteText;
+                            this.hideAutocomplete();
+                            // Move cursor to end
+                            setTimeout(() => {
+                                this.commandPaletteInput.setSelectionRange(this.autocompleteText.length, this.autocompleteText.length);
+                            }, 0);
+                        }
                     }
                 });
                 
@@ -1426,6 +1469,17 @@
             }
 
             // Command Palette Methods
+            async loadHistory() {
+                try {
+                    if (!this.isIncognito) {
+                        this.history = await window.electronAPI.loadHistory();
+                    }
+                } catch (error) {
+                    console.error('Error loading history:', error);
+                    this.history = [];
+                }
+            }
+
             showCommandPalette() {
                 this.commandPaletteInput.value = '';
                 this.selectedResultIndex = -1;
@@ -1442,6 +1496,7 @@
                 this.commandPaletteInput.value = '';
                 this.selectedResultIndex = -1;
                 this.commandPaletteResults.innerHTML = '';
+                this.hideAutocomplete();
             }
 
             setCommandPaletteMode(mode) {
@@ -1480,6 +1535,27 @@
                     }
                 });
                 
+                // Add history suggestions (limit to 5)
+                if (this.history && this.history.length > 0) {
+                    const historyMatches = this.history
+                        .filter(entry => {
+                            if (!query) return true;
+                            const titleMatch = entry.title && entry.title.toLowerCase().includes(query);
+                            const urlMatch = entry.url && entry.url.toLowerCase().includes(query);
+                            return titleMatch || urlMatch;
+                        })
+                        .slice(0, 5)
+                        .map(entry => ({
+                            type: 'history',
+                            title: entry.title || entry.url,
+                            url: entry.url,
+                            favicon: entry.favicon || '',
+                            action: 'Open',
+                            data: entry
+                        }));
+                    results.push(...historyMatches);
+                }
+                
                 // Add search suggestions if there's a query
                 if (query && query.length > 0) {
                     results.push({
@@ -1492,8 +1568,96 @@
                     });
                 }
                 
+                // Store results for autocomplete
+                this.currentResults = results;
+                
+                // Update autocomplete
+                this.updateAutocomplete();
+                
                 // Show results
                 this.renderCommandPaletteResults(results);
+            }
+
+            updateAutocomplete() {
+                const inputValue = this.commandPaletteInput.value;
+                this.autocompleteText = '';
+                
+                // Only show autocomplete if there's text and we're in search mode
+                if (!inputValue || this.commandPaletteMode !== 'search') {
+                    this.hideAutocomplete();
+                    return;
+                }
+                
+                // Helper function to strip protocol from URL
+                const stripProtocol = (url) => {
+                    return url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+                };
+                
+                // Find the best match from history (prioritize URL matches that start with the input)
+                const inputLower = inputValue.toLowerCase();
+                let bestMatch = null;
+                let matchedUrl = null;
+                
+                // Check history for URL matches
+                if (this.history && this.history.length > 0) {
+                    // Sort history by timestamp (most recent first)
+                    const sortedHistory = [...this.history].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                    
+                    for (const entry of sortedHistory) {
+                        if (!entry.url) continue;
+                        
+                        const url = entry.url.toLowerCase();
+                        const urlStripped = stripProtocol(url);
+                        
+                        // Check if URL starts with input (with or without protocol)
+                        if (url.startsWith(inputLower) || urlStripped.startsWith(inputLower)) {
+                            matchedUrl = entry.url;
+                            // Use the stripped version if that's what matched
+                            bestMatch = urlStripped.startsWith(inputLower) ? stripProtocol(entry.url) : entry.url;
+                            break;
+                        }
+                    }
+                }
+                
+                // Check tabs for URL matches if no history match
+                if (!bestMatch) {
+                    for (const tab of this.tabs) {
+                        if (!tab.url) continue;
+                        
+                        const url = tab.url.toLowerCase();
+                        const urlStripped = stripProtocol(url);
+                        
+                        if (url.startsWith(inputLower) || urlStripped.startsWith(inputLower)) {
+                            matchedUrl = tab.url;
+                            bestMatch = urlStripped.startsWith(inputLower) ? stripProtocol(tab.url) : tab.url;
+                            break;
+                        }
+                    }
+                }
+                
+                if (bestMatch && bestMatch !== inputValue) {
+                    this.autocompleteText = bestMatch;
+                    this.showAutocomplete(inputValue, bestMatch);
+                } else {
+                    this.hideAutocomplete();
+                }
+            }
+
+            showAutocomplete(inputValue, fullText) {
+                // Show the full text in the autocomplete div
+                // Create invisible prefix to align the completion
+                const autocompletePortion = fullText.substring(inputValue.length);
+                
+                // Create the display with invisible prefix to align properly
+                const invisiblePrefix = inputValue;
+                this.commandPaletteAutocomplete.innerHTML = `<span style="opacity: 0;">${this.escapeHtml(invisiblePrefix)}</span>${this.escapeHtml(autocompletePortion)}`;
+                this.commandPaletteAutocomplete.style.display = 'block';
+            }
+
+            hideAutocomplete() {
+                this.commandPaletteAutocomplete.innerHTML = '';
+                this.commandPaletteAutocomplete.style.display = 'none';
+                this.autocompleteText = '';
             }
 
             renderCommandPaletteResults(results) {
@@ -1533,10 +1697,13 @@
                             <div class="command-palette-result-action">${result.action} →</div>
                         `;
                         
-                        item.addEventListener('click', () => {
+                        item.addEventListener('click', async () => {
                             if (result.type === 'tab') {
                                 this.switchToTab(result.data.id);
                                 this.hideCommandPalette();
+                            } else if (result.type === 'history') {
+                                this.hideCommandPalette();
+                                await this.createTab(result.url);
                             } else if (result.type === 'search') {
                                 this.executeCommandPaletteAction();
                             }
@@ -1551,22 +1718,74 @@
                 const items = this.commandPaletteResults.querySelectorAll('.command-palette-result-item');
                 if (items.length === 0) return;
                 
+                this.isNavigatingResults = true;
                 this.selectedResultIndex = (this.selectedResultIndex + 1) % items.length;
                 items.forEach((item, index) => {
                     item.classList.toggle('selected', index === this.selectedResultIndex);
                 });
+                
+                // Update input with selected result
+                this.updateInputWithSelectedResult();
+                
+                // Reset flag after a brief delay
+                setTimeout(() => {
+                    this.isNavigatingResults = false;
+                }, 0);
             }
 
             selectPreviousResult() {
                 const items = this.commandPaletteResults.querySelectorAll('.command-palette-result-item');
                 if (items.length === 0) return;
                 
+                this.isNavigatingResults = true;
                 this.selectedResultIndex = this.selectedResultIndex <= 0 
                     ? items.length - 1 
                     : this.selectedResultIndex - 1;
                 items.forEach((item, index) => {
                     item.classList.toggle('selected', index === this.selectedResultIndex);
                 });
+                
+                // Update input with selected result
+                this.updateInputWithSelectedResult();
+                
+                // Reset flag after a brief delay
+                setTimeout(() => {
+                    this.isNavigatingResults = false;
+                }, 0);
+            }
+
+            updateInputWithSelectedResult() {
+                if (this.selectedResultIndex >= 0 && this.currentResults.length > 0) {
+                    const selectedResult = this.currentResults[this.selectedResultIndex];
+                    // Show appropriate value in the input field for visual feedback
+                    if (selectedResult.type === 'search') {
+                        // For search, extract the query from the title
+                        const searchMatch = selectedResult.title.match(/Search "(.*)"/);
+                        this.commandPaletteInput.value = searchMatch ? searchMatch[1] : selectedResult.title;
+                    } else {
+                        // For tabs and history, show the URL
+                        this.commandPaletteInput.value = selectedResult.url;
+                    }
+                }
+            }
+
+            async executeSelectedResult(result) {
+                this.hideCommandPalette();
+                
+                if (result.type === 'tab') {
+                    this.switchToTab(result.data.id);
+                } else if (result.type === 'history') {
+                    await this.createTab(result.url);
+                } else if (result.type === 'search') {
+                    const value = this.commandPaletteInput.value.trim();
+                    let targetUrl = value;
+                    if (!/^https?:\/\//i.test(value)) {
+                        targetUrl = value.includes('.') && !value.includes(' ')
+                            ? 'https://' + value
+                            : 'https://www.google.com/search?q=' + encodeURIComponent(value);
+                    }
+                    await this.createTab(targetUrl);
+                }
             }
 
             async executeCommandPaletteAction() {
@@ -2127,6 +2346,8 @@
                         return;
                     }
                     await window.electronAPI.addHistory(url, title, favicon);
+                    // Reload history for command palette suggestions
+                    await this.loadHistory();
                 } catch (error) {
                     console.error('Error saving history:', error);
                 }
