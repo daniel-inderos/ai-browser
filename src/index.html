@@ -453,6 +453,8 @@
 
                 // Setup hover behavior for collapsed sidebar
                 if (this.hoverTriggerZone && this.tabRail) {
+                    let collapseTimeout = null;
+                    
                     this.hoverTriggerZone.addEventListener('mouseenter', () => {
                         if (this.sidebarCollapsed) {
                             this.sidebarHoveredWhileCollapsed = true;
@@ -463,9 +465,20 @@
 
                     this.tabRail.addEventListener('mouseleave', () => {
                         if (this.sidebarCollapsed && this.sidebarHoveredWhileCollapsed) {
-                            this.sidebarHoveredWhileCollapsed = false;
-                            this.tabRail.classList.add('collapsed');
-                            this.updateFocusModeVisualState();
+                            // Add a small delay before collapsing to prevent flickering
+                            collapseTimeout = setTimeout(() => {
+                                this.sidebarHoveredWhileCollapsed = false;
+                                this.tabRail.classList.add('collapsed');
+                                this.updateFocusModeVisualState();
+                            }, 150);
+                        }
+                    });
+
+                    this.tabRail.addEventListener('mouseenter', () => {
+                        // Cancel collapse if user moves back into sidebar
+                        if (collapseTimeout) {
+                            clearTimeout(collapseTimeout);
+                            collapseTimeout = null;
                         }
                     });
                 }
