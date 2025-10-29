@@ -6,6 +6,7 @@ const STORAGE_DIR = path.join(app.getPath('userData'), 'storage');
 const HISTORY_FILE = path.join(STORAGE_DIR, 'history.json');
 const CHATS_FILE = path.join(STORAGE_DIR, 'chats.json');
 const WINDOW_STATE_FILE = path.join(STORAGE_DIR, 'windowState.json');
+const TABS_FILE = path.join(STORAGE_DIR, 'tabs.json');
 
 // Ensure storage directory exists
 function ensureStorageDir() {
@@ -148,6 +149,40 @@ function saveWindowState(state) {
   }
 }
 
+// Tab management
+function loadTabs() {
+  ensureStorageDir();
+  try {
+    if (fs.existsSync(TABS_FILE)) {
+      const data = fs.readFileSync(TABS_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading tabs:', error);
+  }
+  return { tabs: [], activeTabId: null };
+}
+
+function saveTabs(tabs, activeTabId) {
+  ensureStorageDir();
+  try {
+    // Store only essential tab data (no webview references)
+    const tabsData = tabs.map(tab => ({
+      id: tab.id,
+      url: tab.url,
+      title: tab.title || 'New Tab'
+    }));
+    const data = {
+      tabs: tabsData,
+      activeTabId: activeTabId,
+      timestamp: Date.now()
+    };
+    fs.writeFileSync(TABS_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Error saving tabs:', error);
+  }
+}
+
 module.exports = {
   loadHistory,
   saveHistory,
@@ -160,6 +195,8 @@ module.exports = {
   deleteChatSession,
   clearAllChats,
   loadWindowState,
-  saveWindowState
+  saveWindowState,
+  loadTabs,
+  saveTabs
 };
 

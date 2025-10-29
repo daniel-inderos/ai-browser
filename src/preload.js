@@ -29,6 +29,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteChat: (tabId) => ipcRenderer.invoke('chat-delete', tabId),
   clearChats: () => ipcRenderer.invoke('chats-clear'),
 
+  // Tab persistence
+  loadTabs: () => ipcRenderer.invoke('tabs-load'),
+  saveTabs: (tabs, activeTabId) => ipcRenderer.invoke('tabs-save', { tabs, activeTabId }),
+
   // Navigation events
   onNewTab: (callback) => ipcRenderer.on('new-tab', callback),
   onCloseTab: (callback) => ipcRenderer.on('close-tab', callback),

@@ -389,6 +389,26 @@ ipcMain.handle('copy-to-clipboard', async (event, text) => {
   }
 });
 
+// Tab persistence IPC handlers
+ipcMain.handle('tabs-load', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  // Don't restore tabs for incognito windows
+  if (window && window.isIncognito) {
+    return { tabs: [], activeTabId: null };
+  }
+  return storageHelper.loadTabs();
+});
+
+ipcMain.handle('tabs-save', async (event, { tabs, activeTabId }) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  // Don't save tabs for incognito windows
+  if (window && window.isIncognito) {
+    return { success: true };
+  }
+  storageHelper.saveTabs(tabs, activeTabId);
+  return { success: true };
+});
+
 
 // Create application menu
 const createMenu = () => {

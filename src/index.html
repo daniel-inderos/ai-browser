@@ -196,6 +196,7 @@
                 this.tabs = [];
                 this.activeTabId = null;
                 this.tabCounter = 0;
+                this.saveTabsTimeout = null; // For debouncing tab saves
                 this.sidebarConstraints = {
                     tabRail: { min: 200, max: 420, default: 260 },
                     chatSidebar: { min: 260, max: 560, default: 320 }
@@ -1047,16 +1048,24 @@
                 this.urlBarContainer.style.display = 'flex';
             }
 
-            async createTab(url = 'https://www.google.com') {
+            async createTab(url = 'https://www.google.com', restoredId = null, restoredTitle = null) {
                 const preloadPath = await window.electronAPI.getPreloadPath();
                 console.log('createTab called with url:', url);
-                const tabId = `tab-${++this.tabCounter}`;
+                // Use restored ID if provided, otherwise generate new one
+                const tabId = restoredId || `tab-${++this.tabCounter}`;
+                if (restoredId) {
+                    // Ensure counter is higher than restored ID to avoid conflicts
+                    const idNum = parseInt(tabId.replace('tab-', '')) || 0;
+                    if (idNum >= this.tabCounter) {
+                        this.tabCounter = idNum + 1;
+                    }
+                }
                 
                 // Create tab object
                 const tab = {
                     id: tabId,
                     url: url,
-                    title: 'New Tab',
+                    title: restoredTitle || 'New Tab',
                     webview: null,
                     isLoading: false,
                     chatSidebarOpen: false, // Track chat sidebar state per tab
@@ -1076,8 +1085,9 @@
                 
                 const tabTitle = document.createElement('span');
                 tabTitle.className = 'tab-title';
-                tabTitle.textContent = 'New Tab';
+                tabTitle.textContent = restoredTitle || 'New Tab';
                 tabTitle.setAttribute('aria-label', 'Tab title');
+                tab.tabTitle = tabTitle;
                 
                 const tabFavicon = document.createElement('img');
                 tabFavicon.className = 'tab-favicon';
@@ -1183,10 +1193,12 @@
                     const railFavicon = document.createElement('img');
                     railFavicon.className = 'rail-favicon';
                     railFavicon.alt = '';
+                    tab.railFavicon = railFavicon;
 
                     const railTitle = document.createElement('span');
                     railTitle.className = 'rail-title';
-                    railTitle.textContent = 'New Tab';
+                    railTitle.textContent = restoredTitle || 'New Tab';
+                    tab.railTitle = railTitle;
 
                     const railCloseBtn = document.createElement('button');
                     railCloseBtn.className = 'rail-close-btn';
@@ -1274,6 +1286,8 @@
                   if (result.url.includes('newtab.html')) {
                       setAIIcon();
                   }
+                  // Save tabs after initial navigation (debounced)
+                  this.saveTabsDebounced();
                 } else {
                   console.error('Navigation failed:', result.error);
                 }
@@ -1397,6 +1411,8 @@
                     tab.title = newTitle;
                     tabTitle.textContent = newTitle;
                     tabTitle.setAttribute('title', newTitle);
+                    // Save tabs after title update (debounced)
+                    this.saveTabsDebounced();
                     if (tab.railTitle) {
                         tab.railTitle.textContent = newTitle;
                         tab.railTitle.setAttribute('title', newTitle);
@@ -1422,6 +1438,8 @@
                         this.urlBar.value = this.getDisplayUrl(e.url);
                         this.updateNavBarVisibility(e.url);
                     }
+                    // Save tabs after navigation (debounced)
+                    this.saveTabsDebounced();
                 });
 
                 webview.addEventListener('did-navigate-in-page', (e) => {
@@ -1433,6 +1451,8 @@
                         this.urlBar.value = this.getDisplayUrl(e.url);
                         this.updateNavBarVisibility(e.url);
                     }
+                    // Save tabs after in-page navigation (debounced)
+                    this.saveTabsDebounced();
                 });
 
                 webview.addEventListener('did-fail-load', (e) => {
@@ -1484,6 +1504,7 @@
                 tab.tabElement = tabElement;
                 tab.tabTitle = tabTitle;
                 tab.tabFavicon = tabFavicon;
+                // railElement is already assigned inside the if block above
 
                 this.tabs.push(tab);
                 // Initialize empty chat session for this tab
@@ -1499,10 +1520,45 @@
                     }
                 }, { once: true });
 
-                // Always focus the newly created tab
-                this.switchToTab(tabId);
+                // Always focus the newly created tab (unless restoring - in that case switchToTab will be called after all tabs are restored)
+                if (!restoredId) {
+                    this.switchToTab(tabId);
+                }
+
+                // Save tabs after creation (debounced)
+                this.saveTabsDebounced();
 
                 return tab;
+            }
+            
+            // Debounced tab saving
+            saveTabsDebounced() {
+                // Clear existing timeout
+                if (this.saveTabsTimeout) {
+                    clearTimeout(this.saveTabsTimeout);
+                }
+                // Set new timeout to save after 500ms
+                this.saveTabsTimeout = setTimeout(() => {
+                    this.saveTabs();
+                }, 500);
+            }
+            
+            async saveTabs() {
+                try {
+                    // Don't save tabs in incognito mode
+                    if (this.isIncognito) {
+                        return;
+                    }
+                    // Prepare tab data for saving (only essential info)
+                    const tabsData = this.tabs.map(tab => ({
+                        id: tab.id,
+                        url: tab.url,
+                        title: tab.title || 'New Tab'
+                    }));
+                    await window.electronAPI.saveTabs(tabsData, this.activeTabId);
+                } catch (error) {
+                    console.error('Error saving tabs:', error);
+                }
             }
 
             showLoading() {
@@ -1953,9 +2009,38 @@
                 }
             }
 
-            createInitialTab() {
+            async createInitialTab() {
                 console.log('createInitialTab called');
-                this.createTab('https://www.google.com');
+                try {
+                    // Try to restore saved tabs
+                    const savedTabsData = await window.electronAPI.loadTabs();
+                    if (savedTabsData && savedTabsData.tabs && savedTabsData.tabs.length > 0) {
+                        console.log('Restoring saved tabs:', savedTabsData.tabs.length);
+                        // Restore each saved tab
+                        for (const savedTab of savedTabsData.tabs) {
+                            await this.createTab(savedTab.url, savedTab.id, savedTab.title);
+                        }
+                        // Switch to the previously active tab if it still exists
+                        if (savedTabsData.activeTabId) {
+                            const restoredTab = this.tabs.find(t => t.id === savedTabsData.activeTabId);
+                            if (restoredTab) {
+                                await this.switchToTab(savedTabsData.activeTabId);
+                            } else if (this.tabs.length > 0) {
+                                // If saved active tab doesn't exist, use first tab
+                                await this.switchToTab(this.tabs[0].id);
+                            }
+                        } else if (this.tabs.length > 0) {
+                            await this.switchToTab(this.tabs[0].id);
+                        }
+                    } else {
+                        // No saved tabs, create default tab
+                        await this.createTab('https://www.google.com');
+                    }
+                } catch (error) {
+                    console.error('Error restoring tabs:', error);
+                    // Fallback to creating default tab
+                    await this.createTab('https://www.google.com');
+                }
             }
 
             switchToTab(tabId) {
@@ -2000,6 +2085,10 @@
                     }
                     
                     this.updateChatContextUI(tab);
+                    
+                    // Save tabs after switching (debounced)
+                    this.saveTabsDebounced();
+                    
                     // Focus management
                     if (!this.urlBarContainer || this.urlBarContainer.style.display !== 'none') {
                         this.urlBar.focus();
@@ -2033,6 +2122,9 @@
                         this.createTab();
                     }
                 }
+                
+                // Save tabs after closing (debounced)
+                this.saveTabsDebounced();
             }
 
             closeActiveTab() {
@@ -2051,6 +2143,8 @@
                     if (tab) {
                         tab.webview.loadURL(result.url);
                         tab.url = result.url;
+                        // Save tabs after navigation (debounced)
+                        this.saveTabsDebounced();
                     }
                 }
             }
@@ -2562,7 +2656,17 @@
         // Initialize the browser when the page loads
         document.addEventListener('DOMContentLoaded', () => {
             try {
-                new BrowserManager();
+                const browser = new BrowserManager();
+                // Save tabs before window closes
+                window.addEventListener('beforeunload', () => {
+                    if (browser && !browser.isIncognito) {
+                        // Clear debounce and save immediately
+                        if (browser.saveTabsTimeout) {
+                            clearTimeout(browser.saveTabsTimeout);
+                        }
+                        browser.saveTabs();
+                    }
+                });
             } catch (error) {
                 console.error('Error initializing BrowserManager:', error);
             }
