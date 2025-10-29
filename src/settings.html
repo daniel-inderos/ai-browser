@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <link rel="icon" type="image/svg+xml" href="favicon-light.svg" media="(prefers-color-scheme: light)">
+    <link rel="icon" type="image/svg+xml" href="favicon-dark.svg" media="(prefers-color-scheme: dark)">
+    <link rel="stylesheet" href="index.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--color-background);
+            color: var(--color-text-primary);
+        }
+
+        .settings-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .settings-header {
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-surface-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .settings-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-text-primary);
+        }
+
+        .settings-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-4);
+        }
+
+        .settings-section {
+            margin-bottom: var(--spacing-6);
+        }
+
+        .settings-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-section-title {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-text-primary);
+            margin: 0 0 var(--spacing-3) 0;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-3) 0;
+            gap: var(--spacing-4);
+        }
+
+        .settings-item-label {
+            flex: 1;
+        }
+
+        .settings-item-label label {
+            display: block;
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-1);
+            cursor: pointer;
+        }
+
+        .settings-item-description {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            margin: 0;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--color-border);
+            transition: 0.2s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: rgb(34, 197, 94);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .toggle-switch input:focus + .toggle-slider {
+            box-shadow: 0 0 1px rgb(34, 197, 94);
+        }
+
+        /* Settings Stats */
+        .settings-stats {
+            margin-top: var(--spacing-4);
+            padding: var(--spacing-3);
+            background: var(--color-surface);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-border);
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-2) 0;
+        }
+
+        .stat-item:not(:last-child) {
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: var(--spacing-2);
+            margin-bottom: var(--spacing-2);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+        }
+
+        .stat-value {
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-text-primary);
+        }
+
+        /* Dark theme */
+        @media (prefers-color-scheme: dark) {
+            .toggle-slider:before {
+                background-color: var(--color-surface-elevated);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <div class="settings-header">
+            <div class="settings-title">Settings</div>
+        </div>
+        <div class="settings-content">
+            <section class="settings-section">
+                <h3 class="settings-section-title">Ad Blocker</h3>
+                <div class="settings-item">
+                    <div class="settings-item-label">
+                        <label for="adBlockerToggleSetting">Block ads and trackers</label>
+                        <p class="settings-item-description">Automatically block advertisements and tracking scripts</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="adBlockerToggleSetting" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="settings-stats" id="adBlockerStats">
+                    <div class="stat-item">
+                        <span class="stat-label">Blocked requests:</span>
+                        <span class="stat-value" id="blockedCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Allowed requests:</span>
+                        <span class="stat-value" id="allowedCount">0</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        class SettingsManager {
+            constructor() {
+                this.elements = {
+                    adBlockerToggle: document.getElementById('adBlockerToggleSetting'),
+                    blockedCount: document.getElementById('blockedCount'),
+                    allowedCount: document.getElementById('allowedCount')
+                };
+                this.statsInterval = null;
+                this.setupEventListeners();
+                this.initializeSettings();
+            }
+
+            setupEventListeners() {
+                if (this.elements.adBlockerToggle) {
+                    this.elements.adBlockerToggle.addEventListener('change', (e) => {
+                        this.toggleAdBlocker(e.target.checked);
+                    });
+                }
+
+                // Update stats periodically
+                this.updateStats();
+                this.statsInterval = setInterval(() => {
+                    this.updateStats();
+                }, 1000);
+            }
+
+            async initializeSettings() {
+                try {
+                    const isEnabled = await window.electronAPI.isAdBlockerEnabled();
+                    if (this.elements.adBlockerToggle) {
+                        this.elements.adBlockerToggle.checked = isEnabled;
+                    }
+                } catch (error) {
+                    console.error('Error initializing settings:', error);
+                }
+                this.updateStats();
+            }
+
+            async updateStats() {
+                try {
+                    const stats = await window.electronAPI.getAdBlockerStats();
+                    if (this.elements.blockedCount) {
+                        this.elements.blockedCount.textContent = stats.blocked || 0;
+                    }
+                    if (this.elements.allowedCount) {
+                        this.elements.allowedCount.textContent = stats.allowed || 0;
+                    }
+                } catch (error) {
+                    console.error('Error updating stats:', error);
+                }
+            }
+
+            async toggleAdBlocker(enabled) {
+                try {
+                    const result = await window.electronAPI.toggleAdBlocker(enabled);
+                    if (!result.success) {
+                        // Revert checkbox on error
+                        if (this.elements.adBlockerToggle) {
+                            this.elements.adBlockerToggle.checked = !enabled;
+                        }
+                        console.error('Failed to toggle ad blocker:', result.error);
+                    }
+                } catch (error) {
+                    console.error('Error toggling ad blocker:', error);
+                    // Revert checkbox on error
+                    if (this.elements.adBlockerToggle) {
+                        this.elements.adBlockerToggle.checked = !enabled;
+                    }
+                }
+            }
+
+            destroy() {
+                if (this.statsInterval) {
+                    clearInterval(this.statsInterval);
+                }
+            }
+        }
+
+        let settingsManager;
+        document.addEventListener('DOMContentLoaded', () => {
+            settingsManager = new SettingsManager();
+        });
+
+        // Cleanup on unload
+        window.addEventListener('beforeunload', () => {
+            if (settingsManager) {
+                settingsManager.destroy();
+            }
+        });
+    </script>
+</body>
+</html>
+

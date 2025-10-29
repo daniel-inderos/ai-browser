@@ -26,14 +26,6 @@
                     </svg>
                     <span class="incognito-text">Incognito</span>
                 </div>
-                <button class="ad-blocker-toggle" id="adBlockerToggle" title="Toggle Ad Blocker" aria-label="Toggle ad blocker">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <!-- Shield icon for ad blocker -->
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                        <path d="M9 12l2 2 4-4"/>
-                    </svg>
-                    <span class="ad-blocker-label">Ad Blocker</span>
-                </button>
             </div>
             <div class="rail-url">
                 <div class="rail-url-controls">
@@ -237,11 +229,9 @@
                 // Show incognito indicator if in incognito mode (async)
                 this.checkIncognitoMode();
                 
-                // Initialize ad blocker toggle state
-                this.initializeAdBlockerToggle();
-                
                 // Load history for command palette suggestions
                 this.loadHistory();
+                
             }
             
             async checkIncognitoMode() {
@@ -267,56 +257,11 @@
                 }
             }
             
-            async initializeAdBlockerToggle() {
-                if (!this.adBlockerToggle) return;
-                
-                try {
-                    const isEnabled = await window.electronAPI.isAdBlockerEnabled();
-                    this.updateAdBlockerToggleUI(isEnabled);
-                } catch (error) {
-                    console.error('Error checking ad blocker status:', error);
-                    // Default to enabled
-                    this.updateAdBlockerToggleUI(true);
-                }
+            showSettings() {
+                // Create new tab with settings
+                this.createTab('settings.html');
             }
             
-            updateAdBlockerToggleUI(isEnabled) {
-                if (!this.adBlockerToggle) return;
-                
-                if (isEnabled) {
-                    this.adBlockerToggle.classList.add('active');
-                    this.adBlockerToggle.setAttribute('aria-pressed', 'true');
-                    this.adBlockerToggle.title = 'Disable Ad Blocker';
-                } else {
-                    this.adBlockerToggle.classList.remove('active');
-                    this.adBlockerToggle.setAttribute('aria-pressed', 'false');
-                    this.adBlockerToggle.title = 'Enable Ad Blocker';
-                }
-            }
-            
-            async toggleAdBlocker() {
-                if (!this.adBlockerToggle) return;
-                
-                try {
-                    const currentState = this.adBlockerToggle.classList.contains('active');
-                    const newState = !currentState;
-                    
-                    // Optimistically update UI
-                    this.updateAdBlockerToggleUI(newState);
-                    
-                    // Toggle in main process
-                    const result = await window.electronAPI.toggleAdBlocker(newState);
-                    
-                    if (!result.success) {
-                        // Revert UI on error
-                        this.updateAdBlockerToggleUI(currentState);
-                        console.error('Failed to toggle ad blocker:', result.error);
-                    }
-                } catch (error) {
-                    console.error('Error toggling ad blocker:', error);
-                }
-            }
-
             getDisplayUrl(url) {
                 return url || '';
             }
@@ -411,7 +356,6 @@
                 this.tabRail = document.querySelector('.tab-rail');
                 this.hoverTriggerZone = document.getElementById('hoverTriggerZone');
                 this.incognitoIndicator = document.getElementById('incognitoIndicator');
-                this.adBlockerToggle = document.getElementById('adBlockerToggle');
                 // Command palette elements
                 this.commandPaletteBackdrop = document.getElementById('commandPaletteBackdrop');
                 this.commandPaletteInput = document.getElementById('commandPaletteInput');
@@ -425,6 +369,11 @@
                 this.isNavigatingResults = false; // Flag to prevent input reset during navigation
                 this.autocompleteText = ''; // Current autocomplete suggestion
 
+                // Listen for IPC messages from main process
+                window.electronAPI.onShowSettings(() => {
+                    this.showSettings();
+                });
+                
                 // Listen for messages from webviews
                 window.addEventListener('message', (e) => {
                     console.log('BrowserManager received message:', e.data);
@@ -863,11 +812,6 @@
                 this.refreshBtn.addEventListener('click', () => this.refreshPage());
                 this.retryBtn.addEventListener('click', () => this.refreshPage());
                 
-                // Ad blocker toggle
-                if (this.adBlockerToggle) {
-                    this.adBlockerToggle.addEventListener('click', () => this.toggleAdBlocker());
-                }
-                
                 // Command palette event listeners
                 this.commandPaletteBackdrop.addEventListener('click', (e) => {
                     if (e.target === this.commandPaletteBackdrop) {
@@ -1062,6 +1006,10 @@
                                     e.preventDefault();
                                     this.copyCurrentUrl();
                                 }
+                                break;
+                            case ',':
+                                e.preventDefault();
+                                this.showSettings();
                                 break;
                             default: {
                                 // Number keys 1-9 to switch tabs like Chrome

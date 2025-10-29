@@ -275,6 +275,10 @@ ipcMain.handle('navigate-to', async (event, url) => {
       url = `file://${path.join(__dirname, 'history.html')}`;
       return { success: true, url };
     }
+    if (url.includes('settings.html')) {
+      url = `file://${path.join(__dirname, 'settings.html')}`;
+      return { success: true, url };
+    }
     // Basic URL validation and formatting
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       if (url.includes('.') && !url.includes(' ')) {
@@ -615,6 +619,16 @@ const createMenu = () => {
             }
           }
         },
+        {
+          label: 'Settings',
+          accelerator: 'CmdOrCtrl+,',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('show-settings');
+            }
+          }
+        },
         { type: 'separator' },
         // Tab selection like Chrome: Cmd/Ctrl + 1-9
         ...Array.from({ length: 9 }, (_, i) => ({
@@ -671,7 +685,9 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Unregister global shortcuts before quitting
+// Unregister global shortcuts and save ad blocker stats before quitting
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  // Save ad blocker stats before quitting
+  adBlocker.saveStats();
 });

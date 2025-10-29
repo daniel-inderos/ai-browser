@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onToggleSidebar: (callback) => ipcRenderer.on('toggle-sidebar', callback),
   onSelectTab: (callback) => ipcRenderer.on('select-tab', (_e, data) => callback(data)),
   onShowHistory: (callback) => ipcRenderer.on('show-history', callback),
+  onShowSettings: (callback) => ipcRenderer.on('show-settings', callback),
 
   setWindowButtonsVisible: (visible) => ipcRenderer.invoke('set-window-buttons-visible', visible),
 

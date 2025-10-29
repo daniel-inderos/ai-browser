@@ -7,6 +7,7 @@ const HISTORY_FILE = path.join(STORAGE_DIR, 'history.json');
 const CHATS_FILE = path.join(STORAGE_DIR, 'chats.json');
 const WINDOW_STATE_FILE = path.join(STORAGE_DIR, 'windowState.json');
 const TABS_FILE = path.join(STORAGE_DIR, 'tabs.json');
+const ADBLOCKER_FILE = path.join(STORAGE_DIR, 'adblocker.json');
 
 // Ensure storage directory exists
 function ensureStorageDir() {
@@ -183,6 +184,37 @@ function saveTabs(tabs, activeTabId) {
   }
 }
 
+// Ad blocker settings management
+function loadAdBlockerSettings() {
+  ensureStorageDir();
+  try {
+    if (fs.existsSync(ADBLOCKER_FILE)) {
+      const data = fs.readFileSync(ADBLOCKER_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading ad blocker settings:', error);
+  }
+  return {
+    enabled: true,
+    stats: {
+      blocked: 0,
+      allowed: 0,
+      totalBlocked: 0,
+      totalAllowed: 0
+    }
+  };
+}
+
+function saveAdBlockerSettings(settings) {
+  ensureStorageDir();
+  try {
+    fs.writeFileSync(ADBLOCKER_FILE, JSON.stringify(settings, null, 2));
+  } catch (error) {
+    console.error('Error saving ad blocker settings:', error);
+  }
+}
+
 module.exports = {
   loadHistory,
   saveHistory,
@@ -197,6 +229,8 @@ module.exports = {
   loadWindowState,
   saveWindowState,
   loadTabs,
-  saveTabs
+  saveTabs,
+  loadAdBlockerSettings,
+  saveAdBlockerSettings
 };
 
