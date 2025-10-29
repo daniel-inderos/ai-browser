@@ -1,7 +1,7 @@
 // Load environment variables
 require('dotenv').config();
 
-const { app, BrowserWindow, ipcMain, Menu, clipboard, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, clipboard, globalShortcut, session } = require('electron');
 const path = require('node:path');
 const { initialize, enable } = require('@electron/remote/main');
 const { streamChat } = require('./openaiHelper');
@@ -18,6 +18,30 @@ if (require('electron-squirrel-startup')) {
 console.log('App initialization starting...');
 
 let mainWindow;
+
+// Configure cookie persistence for the browser session
+const configureSessionCookies = () => {
+  // Get the persistent session (default partition)
+  // The 'persist:' prefix automatically enables persistent cookie storage
+  const defaultSession = session.fromPartition('persist:browser');
+  
+  // Configure session to ensure cookies are enabled and persisted
+  // Cookies are enabled by default, but accessing the session here ensures
+  // it's properly initialized before any windows or webviews use it
+  
+  // Optional: Monitor cookie changes for debugging (can be removed in production)
+  defaultSession.cookies.on('changed', (event, cookie, cause, removed) => {
+    if (process.env.DEBUG_COOKIES === 'true') {
+      if (removed) {
+        console.log('Cookie removed:', cookie.name, 'from', cookie.domain);
+      } else {
+        console.log('Cookie set:', cookie.name, 'from', cookie.domain);
+      }
+    }
+  });
+
+  console.log('Cookie persistence enabled for browser session');
+};
 
 const createWindow = (isIncognito = false) => {
   console.log(`Creating ${isIncognito ? 'incognito' : 'browser'} window...`);
@@ -564,7 +588,9 @@ const createMenu = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(() => {
-  console.log('Electron app ready, creating window...');
+  console.log('Electron app ready, configuring cookie persistence...');
+  configureSessionCookies();
+  console.log('Creating window...');
   createWindow();
   console.log('Creating menu...');
   createMenu();
