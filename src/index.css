@@ -688,7 +688,7 @@ textarea:focus {
 
 .url-bar {
     width: 100%;
-    padding: var(--spacing-3) var(--spacing-4);
+    padding: var(--spacing-3) 44px var(--spacing-3) var(--spacing-4);
     background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -1010,8 +1010,7 @@ webview {
 
 /* Chat and Summarize Buttons */
 .chat-btn,
-.summarize-btn,
-.copy-url-btn {
+.summarize-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1029,9 +1028,38 @@ webview {
     -webkit-app-region: no-drag; /* Allow interaction in drag area */
 }
 
+/* Copy URL Button - Inside URL Bar */
+.copy-url-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    width: 32px;
+    height: 32px;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    opacity: 0;
+    visibility: hidden;
+    -webkit-app-region: no-drag; /* Allow interaction in drag area */
+    z-index: 10;
+}
+
+.url-input-wrapper:hover .copy-url-btn {
+    opacity: 1;
+    visibility: visible;
+}
+
 .chat-btn:hover:not(:disabled),
-.summarize-btn:hover:not(:disabled),
-.copy-url-btn:hover:not(:disabled) {
+.summarize-btn:hover:not(:disabled) {
     background: var(--color-surface-hover);
     border-color: var(--color-border-hover);
     color: var(--color-text-primary);
@@ -1039,11 +1067,20 @@ webview {
     box-shadow: var(--shadow-md);
 }
 
+.copy-url-btn:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+    transform: translateY(-50%) scale(1.05);
+}
+
 .chat-btn:active:not(:disabled),
-.summarize-btn:active:not(:disabled),
-.copy-url-btn:active:not(:disabled) {
+.summarize-btn:active:not(:disabled) {
     transform: translateY(0);
     box-shadow: var(--shadow-sm);
+}
+
+.copy-url-btn:active:not(:disabled) {
+    transform: translateY(-50%) scale(0.95);
 }
 
 .chat-btn:disabled,
