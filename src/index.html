@@ -2174,16 +2174,12 @@
 
             toggleChatSidebar() {
                 if (!this.chatSidebar) return;
-                const currentTab = this.tabs.find(t => t.id === this.activeTabId);
-                const isOpen = this.chatSidebar.classList.toggle('open');
-                if (currentTab) {
-                    currentTab.chatSidebarOpen = isOpen;
-                }
-
+                const isOpen = this.chatSidebar.classList.contains('open');
+                
                 if (isOpen) {
-                    this.showChatSidebar();
-                } else {
                     this.hideChatSidebar();
+                } else {
+                    this.showChatSidebar();
                 }
             }
 
@@ -2221,11 +2217,15 @@
                 const currentTab = this.tabs.find(t => t.id === this.activeTabId);
                 if (!currentTab) return;
 
+                // Don't show if already open
+                if (this.chatSidebar.classList.contains('open')) return;
+
                 // Auto-add current page as context if not already added
                 if (!currentTab.referencedTabs.has(currentTab.id)) {
                     currentTab.referencedTabs.add(currentTab.id);
                 }
                 
+                this.chatSidebar.style.display = 'flex';
                 this.chatSidebar.classList.add('open');
                 this.updateContentAreaWidth();
                 this.chatInput.focus();
@@ -2246,6 +2246,9 @@
                 if (clearHistory) {
                     this.chatHistory.innerHTML = '';
                 }
+                
+                // Hide sidebar immediately
+                this.chatSidebar.style.display = '';
             }
 
             updateChatContextUI(tab) {
