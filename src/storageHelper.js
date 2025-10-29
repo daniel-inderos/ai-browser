@@ -5,6 +5,7 @@ const { app } = require('electron');
 const STORAGE_DIR = path.join(app.getPath('userData'), 'storage');
 const HISTORY_FILE = path.join(STORAGE_DIR, 'history.json');
 const CHATS_FILE = path.join(STORAGE_DIR, 'chats.json');
+const WINDOW_STATE_FILE = path.join(STORAGE_DIR, 'windowState.json');
 
 // Ensure storage directory exists
 function ensureStorageDir() {
@@ -124,6 +125,29 @@ function clearAllChats() {
   }
 }
 
+// Window state management
+function loadWindowState() {
+  ensureStorageDir();
+  try {
+    if (fs.existsSync(WINDOW_STATE_FILE)) {
+      const data = fs.readFileSync(WINDOW_STATE_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading window state:', error);
+  }
+  return null;
+}
+
+function saveWindowState(state) {
+  ensureStorageDir();
+  try {
+    fs.writeFileSync(WINDOW_STATE_FILE, JSON.stringify(state, null, 2));
+  } catch (error) {
+    console.error('Error saving window state:', error);
+  }
+}
+
 module.exports = {
   loadHistory,
   saveHistory,
@@ -134,6 +158,8 @@ module.exports = {
   saveChats,
   saveChatSession,
   deleteChatSession,
-  clearAllChats
+  clearAllChats,
+  loadWindowState,
+  saveWindowState
 };
 

@@ -24,10 +24,20 @@ const createWindow = (isIncognito = false) => {
   // Create a unique partition for incognito windows to ensure ephemeral session
   const partition = isIncognito ? `incognito-${Date.now()}`  : 'persist:browser';
   
-  // Create the browser window.
-  const newWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+  // Load saved window state (only for non-incognito windows)
+  let windowState = null;
+  if (!isIncognito) {
+    windowState = storageHelper.loadWindowState();
+  }
+  
+  // Default window dimensions
+  const defaultWidth = 1280;
+  const defaultHeight = 800;
+  
+  // Create the browser window with saved state or defaults
+  const windowOptions = {
+    width: windowState?.width || defaultWidth,
+    height: windowState?.height || defaultHeight,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -39,7 +49,15 @@ const createWindow = (isIncognito = false) => {
     frame: false,
     titleBarStyle: 'hidden',
     show: false, // Don't show until ready
-  });
+  };
+  
+  // Restore position if saved (only on primary display for now)
+  if (windowState?.x !== undefined && windowState?.y !== undefined) {
+    windowOptions.x = windowState.x;
+    windowOptions.y = windowState.y;
+  }
+  
+  const newWindow = new BrowserWindow(windowOptions);
   
   // Store partition on window object for webview access
   newWindow.incognitoPartition = partition;
@@ -55,9 +73,16 @@ const createWindow = (isIncognito = false) => {
   // Load the browser interface
   newWindow.loadFile(path.join(__dirname, 'index.html'));
 
-  // Show window when ready
+  // Restore maximized or fullscreen state after window is ready
   newWindow.once('ready-to-show', () => {
     console.log('Window ready to show, displaying...');
+    if (windowState) {
+      if (windowState.isFullScreen) {
+        newWindow.setFullScreen(true);
+      } else if (windowState.isMaximized) {
+        newWindow.maximize();
+      }
+    }
     newWindow.show();
   });
 
@@ -84,6 +109,63 @@ const createWindow = (isIncognito = false) => {
     console.error('Provisional load failed:', errorCode, errorDescription);
   });
 
+  // Save window state when window closes (only for non-incognito windows)
+  if (!isIncognito) {
+    let saveStateTimeout;
+    const saveWindowState = () => {
+      if (saveStateTimeout) {
+        clearTimeout(saveStateTimeout);
+      }
+      saveStateTimeout = setTimeout(() => {
+        try {
+          const bounds = newWindow.getBounds();
+          const state = {
+            width: bounds.width,
+            height: bounds.height,
+            x: bounds.x,
+            y: bounds.y,
+            isMaximized: newWindow.isMaximized(),
+            isFullScreen: newWindow.isFullScreen()
+          };
+          storageHelper.saveWindowState(state);
+        } catch (error) {
+          console.error('Error saving window state:', error);
+        }
+      }, 250); // Debounce saves
+    };
+    
+    // Save state on window events
+    newWindow.on('move', saveWindowState);
+    newWindow.on('resize', saveWindowState);
+    newWindow.on('maximize', saveWindowState);
+    newWindow.on('unmaximize', saveWindowState);
+    newWindow.on('enter-full-screen', saveWindowState);
+    newWindow.on('leave-full-screen', saveWindowState);
+    
+    // Save final state when window is closing
+    newWindow.on('close', (event) => {
+      // Clear any pending timeout
+      if (saveStateTimeout) {
+        clearTimeout(saveStateTimeout);
+      }
+      // Save state synchronously on close
+      try {
+        const bounds = newWindow.getBounds();
+        const state = {
+          width: bounds.width,
+          height: bounds.height,
+          x: bounds.x,
+          y: bounds.y,
+          isMaximized: newWindow.isMaximized(),
+          isFullScreen: newWindow.isFullScreen()
+        };
+        storageHelper.saveWindowState(state);
+      } catch (error) {
+        console.error('Error saving window state on close:', error);
+      }
+    });
+  }
+  
   // Handle window closed
   newWindow.on('closed', () => {
     console.log('Window closed');
