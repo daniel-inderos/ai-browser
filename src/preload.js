@@ -65,5 +65,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCurrentUrl: () => ipcRenderer.invoke('get-current-url'),
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
   onCopyCurrentUrl: (callback) => ipcRenderer.on('copy-current-url', callback),
-  onUrlCopied: (callback) => ipcRenderer.on('url-copied', (_e, url) => callback(url))
+  onUrlCopied: (callback) => ipcRenderer.on('url-copied', (_e, url) => callback(url)),
+
+  // Ad blocker
+  isAdBlockerEnabled: () => ipcRenderer.invoke('ad-blocker-enabled'),
+  toggleAdBlocker: (enabled) => ipcRenderer.invoke('ad-blocker-toggle', enabled),
+  getAdBlockerStats: () => ipcRenderer.invoke('ad-blocker-stats')
 });
