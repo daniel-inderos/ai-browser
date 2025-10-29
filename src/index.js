@@ -6,6 +6,7 @@ const path = require('node:path');
 const { initialize, enable } = require('@electron/remote/main');
 const { streamChat } = require('./openaiHelper');
 const storageHelper = require('./storageHelper');
+const AdBlocker = require('./adBlocker');
 
 // Initialize @electron/remote
 initialize();
@@ -18,9 +19,10 @@ if (require('electron-squirrel-startup')) {
 console.log('App initialization starting...');
 
 let mainWindow;
+let adBlocker;
 
-// Configure cookie persistence for the browser session
-const configureSessionCookies = () => {
+// Configure cookie persistence and ad blocking for the browser session
+const configureSessionCookies = async () => {
   // Get the persistent session (default partition)
   // The 'persist:' prefix automatically enables persistent cookie storage
   const defaultSession = session.fromPartition('persist:browser');
@@ -41,12 +43,39 @@ const configureSessionCookies = () => {
   });
 
   console.log('Cookie persistence enabled for browser session');
+
+  // Initialize ad blocker for the default session
+  try {
+    const filterListPath = path.join(__dirname, '..', 'ad_blocker_list.json');
+    adBlocker = new AdBlocker(defaultSession);
+    const loaded = await adBlocker.loadFilterLists(filterListPath);
+    if (loaded) {
+      console.log('Ad blocker initialized successfully');
+    } else {
+      console.warn('Ad blocker initialization had issues, but continuing...');
+    }
+  } catch (error) {
+    console.error('Failed to initialize ad blocker:', error);
+  }
 };
 
-const createWindow = (isIncognito = false) => {
+const createWindow = async (isIncognito = false) => {
   console.log(`Creating ${isIncognito ? 'incognito' : 'browser'} window...`);
   // Create a unique partition for incognito windows to ensure ephemeral session
   const partition = isIncognito ? `incognito-${Date.now()}`  : 'persist:browser';
+  
+  // Setup ad blocker for incognito windows
+  if (isIncognito) {
+    try {
+      const incognitoSession = session.fromPartition(partition);
+      const filterListPath = path.join(__dirname, '..', 'ad_blocker_list.json');
+      const incognitoAdBlocker = new AdBlocker(incognitoSession);
+      await incognitoAdBlocker.loadFilterLists(filterListPath);
+      console.log('Ad blocker initialized for incognito window');
+    } catch (error) {
+      console.error('Failed to initialize ad blocker for incognito window:', error);
+    }
+  }
   
   // Load saved window state (only for non-incognito windows)
   let windowState = null;
@@ -429,8 +458,8 @@ const createMenu = () => {
         {
           label: 'New Incognito Window',
           accelerator: 'CmdOrCtrl+Shift+N',
-          click: () => {
-            createWindow(true);
+          click: async () => {
+            await createWindow(true);
           }
         },
         {
@@ -607,11 +636,11 @@ const createMenu = () => {
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
-app.whenReady().then(() => {
-  console.log('Electron app ready, configuring cookie persistence...');
-  configureSessionCookies();
+app.whenReady().then(async () => {
+  console.log('Electron app ready, configuring cookie persistence and ad blocker...');
+  await configureSessionCookies();
   console.log('Creating window...');
-  createWindow();
+  await createWindow();
   console.log('Creating menu...');
   createMenu();
 
@@ -627,9 +656,9 @@ app.whenReady().then(() => {
 
   // On OS X it's common to re-create a window in the
   // dock icon is clicked and there are no other windows open.
-  app.on('activate', () => {
+  app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      await createWindow();
     }
   });
 });

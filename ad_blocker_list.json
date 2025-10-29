@@ -1,0 +1,470 @@
+{
+    "manifest_url": "https://dia-blocklists-release.diabrowser.engineering",
+    "known_block_lists": [
+      {
+        "id": "EasyList",
+        "display_name": "EasyList",
+        "type": "generic",
+        "info_url": "https://easylist.to/",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/easylist.to/easylist/easylist.txt"
+        ],
+        "resource_name": "EasyList"
+      },
+      {
+        "id": "AdGuardAds",
+        "display_name": "AdGuard - Ads",
+        "type": "generic",
+        "info_url": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/2_without_easylist.txt"
+        ],
+        "resource_name": "EasyList"
+      },
+      {
+        "id": "uBlock",
+        "display_name": "uBlock Origin filters",
+        "type": "generic",
+        "info_url": "https://github.com/uBlockOrigin/uAssets",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/ublockorigin.github.io/uAssets/filters/filters.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/ublockorigin.github.io/uAssets/filters/filters-2020.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/ublockorigin.github.io/uAssets/filters/filters-2021.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/ublockorigin.github.io/uAssets/filters/filters-2022.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/ublockorigin.github.io/uAssets/filters/filters-2023.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/ublockorigin.github.io/uAssets/filters/filters-2024.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/ublockorigin.github.io/uAssets/filters/ubo-link-shorteners.txt"
+        ]
+      },
+      {
+        "id": "CookieMonster",
+        "display_name": "CookieMonster by Fanboy",
+        "type": "cookies",
+        "info_url": "https://github.com/easylist/easylist#fanboy-lists",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/secure.fanboy.co.nz/fanboy-cookiemonster.txt"
+        ]
+      },
+      {
+        "id": "AdGuardCookies",
+        "display_name": "AdGuard – Cookie Notices",
+        "type": "cookies",
+        "info_url": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/18.txt"
+        ]
+      },
+      {
+        "id": "EasyPrivacy",
+        "display_name": "EasyPrivacy",
+        "type": "privacy",
+        "info_url": "https://easylist.to/",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/easylist.to/easylist/easyprivacy.txt"
+        ],
+        "resource_name": "EasyPrivacy"
+      },
+      {
+        "id": "AdGuardSpyware",
+        "display_name": "AdGuard Tracking Protection",
+        "type": "privacy",
+        "info_url": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/3.txt"
+        ]
+      },
+      {
+        "id": "EasyListSocial",
+        "display_name": "EasyList - Social Widgets",
+        "type": "privacy",
+        "info_url": "https://easylist.to/",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/ublockorigin.github.io/uAssets/thirdparties/easylist-social.txt"
+        ]
+      },
+      {
+        "id": "AdGuardSocial",
+        "display_name": "AdGuard – Social Widgets",
+        "type": "privacy",
+        "info_url": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/4.txt"
+        ]
+      },
+      {
+        "id": "FanBoyThirdParty",
+        "display_name": "Fanboy – Anti-Facebook",
+        "type": "privacy",
+        "info_url": "https://github.com/easylist/easylist#fanboy-lists",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/secure.fanboy.co.nz/fanboy-antifacebook.txt"
+        ]
+      },
+      {
+        "id": "pl",
+        "display_name": "EasyList - Polska lista",
+        "type": "regional",
+        "info_url": "https://github.com/MajkiIT/polish-ads-filter#polish-filters-for-adblock-ublock-origin--adguard",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/MajkiIT/polish-ads-filter/master/polish-adblock-filters/adblock.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/MajkiIT/polish-ads-filter/master/polish-adblock-filters/adblock_ublock.txt"
+        ]
+      },
+      {
+        "id": "ua",
+        "display_name": "RU AdList",
+        "type": "regional",
+        "info_url": "https://forums.lanik.us/viewtopic.php?f=102\u0026t=22512",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/adservers.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/first_level.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/general_block.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/general_hide.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/popup.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/specific_antisocial.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/specific_block.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/specific_hide.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/specific_special.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/thirdparty.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/advblock/whitelist.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/css-fixes-experimental.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/js-fixes-experimental.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/ruadlist/master/AWRL-non-sync.txt"
+        ]
+      },
+      {
+        "id": "al",
+        "display_name": "Adblock List for Albania",
+        "type": "regional",
+        "info_url": "https://github.com/AnXh3L0/blocklist",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/AnXh3L0/blocklist/master/albanian-easylist-addition/Albania.txt"
+        ]
+      },
+      {
+        "id": "bg",
+        "display_name": "Adblock List for Bulgaria",
+        "type": "regional",
+        "info_url": "https://stanev.org/abp/",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/stanev.org/abp/adblock_bg.txt"
+        ]
+      },
+      {
+        "id": "zn",
+        "display_name": "AdGuard Chinese (中文)",
+        "type": "regional",
+        "info_url": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/224.txt"
+        ]
+      },
+      {
+        "id": "cssk",
+        "display_name": "EasyList Czech and Slovak",
+        "type": "regional",
+        "info_url": "https://github.com/tomasko126/easylistczechandslovak",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/tomasko126/easylistczechandslovak/master/filters.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/tomasko126/easylistczechandslovak/master/filters_ublock.txt"
+        ]
+      },
+      {
+        "id": "de",
+        "display_name": "EasyList Germany",
+        "type": "regional",
+        "info_url": "https://forums.lanik.us/viewforum.php?f=90",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/easylist.to/easylistgermany/easylistgermany.txt"
+        ]
+      },
+      {
+        "id": "ee",
+        "display_name": "Eesti saitidele kohandatud filter (Estonian)",
+        "type": "regional",
+        "info_url": "https://adblock.ee/",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/adblock.ee/list.php"
+        ]
+      },
+      {
+        "id": "ar",
+        "display_name": "Liste AR",
+        "type": "regional",
+        "info_url": "https://forums.lanik.us/viewforum.php?f=98",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/easylist-downloads.adblockplus.org/Liste_AR.txt"
+        ]
+      },
+      {
+        "id": "espt",
+        "display_name": "AdGuard Spanish/Portuguese",
+        "type": "regional",
+        "info_url": "https://kb.adguard.com/en/general/adguard-ad-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/9.txt"
+        ]
+      },
+      {
+        "id": "es",
+        "display_name": "EasyList Spanish",
+        "type": "regional",
+        "info_url": "https://forums.lanik.us/viewforum.php?f=103",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/easylist-downloads.adblockplus.org/easylistspanish.txt"
+        ]
+      },
+      {
+        "id": "fi",
+        "display_name": "Adblock List for Finland",
+        "type": "regional",
+        "info_url": "https://github.com/finnish-easylist-addition/finnish-easylist-addition",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/finnish-easylist-addition/finnish-easylist-addition/gh-pages/Finland_adb.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/finnish-easylist-addition/finnish-easylist-addition/gh-pages/Finland_adb_uBO_extras.txt"
+        ]
+      },
+      {
+        "id": "fr",
+        "display_name": "AdGuard Français",
+        "type": "regional",
+        "info_url": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/16.txt"
+        ]
+      },
+      {
+        "id": "gr",
+        "display_name": "Greek AdBlock Filter",
+        "type": "regional",
+        "info_url": "https://github.com/kargig/greek-adblockplus-filter",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/www.void.gr/kargig/void-gr-filters.txt"
+        ]
+      },
+      {
+        "id": "hr",
+        "display_name": "Dandelion Sprout's Serbo-Croatian filters",
+        "type": "regional",
+        "info_url": "https://github.com/DandelionSprout/adfilt#readme",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/DandelionSprout/adfilt/master/SerboCroatianList.txt"
+        ]
+      },
+      {
+        "id": "hu",
+        "display_name": "hufilter (Hungarian)",
+        "type": "regional",
+        "info_url": "https://github.com/hufilter/hufilter",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/hufilter/hufilter@gh-pages/hufilter-ublock.txt"
+        ]
+      },
+      {
+        "id": "ind",
+        "display_name": "ABPindo (Indonesia/Malaysia)",
+        "type": "regional",
+        "info_url": "https://github.com/ABPindo/indonesianadblockrules",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/ABPindo/indonesianadblockrules/master/subscriptions/abpindo.txt"
+        ]
+      },
+      {
+        "id": "il",
+        "display_name": "EasyList Hebrew",
+        "type": "regional",
+        "info_url": "https://github.com/easylist/EasyListHebrew",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/EasyListHebrew/master/EasyListHebrew.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist/EasyListHebrew/master/EasyListHebrew-uBO.txt"
+        ]
+      },
+      {
+        "id": "in",
+        "display_name": "IndianList",
+        "type": "regional",
+        "info_url": "https://github.com/mediumkreation/IndianList",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/easylist-downloads.adblockplus.org/indianlist.txt"
+        ]
+      },
+      {
+        "id": "persian",
+        "display_name": "PersianBlocker",
+        "type": "regional",
+        "info_url": "https://github.com/MasterKia/PersianBlocker",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/MasterKia/PersianBlocker/main/PersianBlocker.txt"
+        ]
+      },
+      {
+        "id": "cold",
+        "display_name": "Icelandic ABP List",
+        "type": "regional",
+        "info_url": "https://github.com/brave/adblock-lists",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/brave/adblock-lists/master/custom/is.txt"
+        ]
+      },
+      {
+        "id": "it",
+        "display_name": "EasyList Italy",
+        "type": "regional",
+        "info_url": "https://forums.lanik.us/viewforum.php?f=96",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/easylist-downloads.adblockplus.org/easylistitaly.txt"
+        ]
+      },
+      {
+        "id": "jp",
+        "display_name": "AdGuard Japanese",
+        "type": "regional",
+        "info_url": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/7.txt"
+        ]
+      },
+      {
+        "id": "kr",
+        "display_name": "List-KR (Korean)",
+        "type": "regional",
+        "info_url": "https://github.com/List-KR/List-KR#readme",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/3rd_domains.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/1st_domains.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/general_elemhide.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/general_url.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/specific_URL.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/specific_ELEMHIDE.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/removeparam.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/extended_css_ELEMHIDE.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/extended_css_INJECTION.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/specific_CSS.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-share/allowlist.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-uBO/specific_ELEMHIDE.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-uBO/specific_REDIRECT.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-uBO/extended_css_ELEMHIDE.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-uBO/scriptlets.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-uBO/antiadblock.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-uBO/allowlist.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/cdn.jsdelivr.net/gh/List-KR/List-KR@latest/filters-uBO/specific_CSS.txt"
+        ]
+      },
+      {
+        "id": "lt",
+        "display_name": "EasyList Lithuania",
+        "type": "regional",
+        "info_url": "https://github.com/EasyList-Lithuania/easylist_lithuania",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/EasyList-Lithuania/easylist_lithuania/master/easylistlithuania.txt"
+        ]
+      },
+      {
+        "id": "lv",
+        "display_name": "Latvian List",
+        "type": "regional",
+        "info_url": "https://github.com/Latvian-List/adblock-latvian",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/Latvian-List/adblock-latvian/master/lists/latvian-list.txt"
+        ]
+      },
+      {
+        "id": "mk",
+        "display_name": "Macedonian adBlock Filters",
+        "type": "regional",
+        "info_url": "https://github.com/DeepSpaceHarbor/Macedonian-adBlock-Filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/DeepSpaceHarbor/Macedonian-adBlock-Filters/master/Filters"
+        ]
+      },
+      {
+        "id": "dk",
+        "display_name": "AdGuard Dutch",
+        "type": "regional",
+        "info_url": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/8.txt"
+        ]
+      },
+      {
+        "id": "nodkice",
+        "display_name": "Dandelion Sprouts nordiske filtre (Norway/Denmark/Iceland)",
+        "type": "regional",
+        "info_url": "https://github.com/DandelionSprout/adfilt",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/DandelionSprout/adfilt/master/NorwegianList.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/DandelionSprout/adfilt/master/NorwegianExperimentalList alternate versions/AntiAdblockEntries.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/DandelionSprout/adfilt/master/NorwegianExperimentalList alternate versions/NordicFilters-NotFirefox.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/DandelionSprout/adfilt/master/NorwegianExperimentalList alternate versions/NordicFilters-NotBrave.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/DandelionSprout/adfilt/master/NorwegianExperimentalList alternate versions/AdditionalGenericEntriesForUBO.txt"
+        ]
+      },
+      {
+        "id": "ro",
+        "display_name": "Romanian Ad (ROad) Block List Light",
+        "type": "regional",
+        "info_url": "https://github.com/tcptomato/ROad-Block",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/tcptomato/ROad-Block/master/road-block-filters-light.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/tcptomato/ROad-Block/master/road-ubo.txt"
+        ]
+      },
+      {
+        "id": "se",
+        "display_name": "Frellwit's Swedish Filter",
+        "type": "regional",
+        "info_url": "https://github.com/lassekongo83/Frellwits-filter-lists",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/lassekongo83/Frellwits-filter-lists/master/Frellwits-Swedish-Filter.txt"
+        ]
+      },
+      {
+        "id": "slovenia",
+        "display_name": "Slovenian List",
+        "type": "regional",
+        "info_url": "https://github.com/betterwebleon/slovenian-list",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/betterwebleon/slovenian-list/master/filters.txt"
+        ]
+      },
+      {
+        "id": "th",
+        "display_name": "EasyList Thailand",
+        "type": "regional",
+        "info_url": "https://github.com/easylist-thailand/easylist-thailand",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist-thailand/easylist-thailand/master/subscription/easylist-thailand.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/easylist-thailand/easylist-thailand/master/subscription/ublock.txt"
+        ]
+      },
+      {
+        "id": "tr",
+        "display_name": "AdGuard Turkish",
+        "type": "regional",
+        "info_url": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/filters.adtidy.org/extension/ublock/filters/13.txt"
+        ]
+      },
+      {
+        "id": "vn",
+        "display_name": "ABPVN List (Vietnamese)",
+        "type": "regional",
+        "info_url": "https://abpvn.com/",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/raw.githubusercontent.com/abpvn/abpvn/master/filter/abpvn_ublock.txt"
+        ]
+      },
+      {
+        "id": "BCNYBlocklists",
+        "display_name": "BCNY Blocklists",
+        "type": "bcny",
+        "info_url": "https://diabrowser.com",
+        "urls": [
+          "https://dia-blocklists-release.diabrowser.engineering/bcny_lists/list_2.txt",
+          "https://dia-blocklists-release.diabrowser.engineering/bcny_lists/list_1.txt"
+        ]
+      }
+    ]
+  }
+  
