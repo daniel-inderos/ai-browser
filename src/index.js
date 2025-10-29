@@ -114,6 +114,19 @@ ipcMain.handle('get-partition', (event) => {
   return window ? window.incognitoPartition || 'persist:browser' : 'persist:browser';
 });
 
+ipcMain.handle('set-window-buttons-visible', (event, visible) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) {
+    return { success: false, error: 'Window not found' };
+  }
+
+  if (process.platform === 'darwin' && typeof window.setWindowButtonVisibility === 'function') {
+    window.setWindowButtonVisibility(Boolean(visible));
+  }
+
+  return { success: true };
+});
+
 // IPC handlers for tab management
 ipcMain.handle('create-tab', async (event, url = 'https://www.google.com') => {
   if (!url) {

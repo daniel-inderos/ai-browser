@@ -457,6 +457,7 @@
                         if (this.sidebarCollapsed) {
                             this.sidebarHoveredWhileCollapsed = true;
                             this.tabRail.classList.remove('collapsed');
+                            this.updateFocusModeVisualState(true);
                         }
                     });
 
@@ -464,11 +465,13 @@
                         if (this.sidebarCollapsed && this.sidebarHoveredWhileCollapsed) {
                             this.sidebarHoveredWhileCollapsed = false;
                             this.tabRail.classList.add('collapsed');
+                            this.updateFocusModeVisualState();
                         }
                     });
                 }
 
                 this.updateContentAreaWidth();
+                this.updateFocusModeVisualState();
             }
 
             getStoredSidebarWidth(key) {
@@ -687,6 +690,21 @@
                 localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed.toString());
                 
                 this.updateContentAreaWidth();
+                this.updateFocusModeVisualState();
+            }
+
+            updateFocusModeVisualState(forceVisible = false) {
+                if (!window.electronAPI || typeof window.electronAPI.setWindowButtonsVisible !== 'function') {
+                    return;
+                }
+
+                const shouldShow = forceVisible || !this.sidebarCollapsed;
+
+                window.electronAPI
+                    .setWindowButtonsVisible(shouldShow)
+                    .catch((error) => {
+                        console.warn('Failed to update window buttons visibility:', error);
+                    });
             }
 
             async handleNewTabChat(data, sourceTab) {
