@@ -1567,6 +1567,46 @@
                 this.commandPaletteInput.focus();
             }
 
+            // Helper function to get favicon URL for a given URL
+            getFaviconUrl(url, existingFavicon = '') {
+                // If we already have a favicon, use it
+                if (existingFavicon && existingFavicon.trim()) {
+                    return existingFavicon;
+                }
+                
+                // Extract domain from URL
+                try {
+                    let domain;
+                    if (url.startsWith('http://') || url.startsWith('https://')) {
+                        const urlObj = new URL(url);
+                        domain = urlObj.hostname;
+                    } else if (url.includes('://')) {
+                        // Handle other protocols
+                        return '';
+                    } else {
+                        // Assume https for relative URLs and extract domain
+                        const parts = url.split('/')[0];
+                        domain = parts.split('?')[0].split(':')[0]; // Remove query params and port
+                    }
+                    
+                    if (!domain) {
+                        return '';
+                    }
+                    
+                    // Use Google's favicon service - use domain parameter for better compatibility
+                    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+                } catch (err) {
+                    // If URL parsing fails, try to extract domain manually
+                    try {
+                        const match = url.match(/(?:https?:\/\/)?(?:www\.)?([^\/\?]+)/);
+                        if (match && match[1]) {
+                            return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(match[1])}&sz=32`;
+                        }
+                    } catch (e) {}
+                    return '';
+                }
+            }
+
             updateCommandPaletteResults() {
                 const query = this.commandPaletteInput.value.trim().toLowerCase();
                 const results = [];
@@ -1575,11 +1615,12 @@
                 this.tabs.forEach(tab => {
                     if (tab.id !== this.activeTabId && 
                         (!query || tab.title.toLowerCase().includes(query) || tab.url.toLowerCase().includes(query))) {
+                        const favicon = tab.railFavicon ? tab.railFavicon.src : '';
                         results.push({
                             type: 'tab',
                             title: tab.title,
                             url: tab.url,
-                            favicon: tab.railFavicon ? tab.railFavicon.src : '',
+                            favicon: this.getFaviconUrl(tab.url, favicon),
                             action: 'Switch to Tab',
                             data: tab
                         });
@@ -1600,7 +1641,7 @@
                             type: 'history',
                             title: entry.title || entry.url,
                             url: entry.url,
-                            favicon: entry.favicon || '',
+                            favicon: this.getFaviconUrl(entry.url, entry.favicon || ''),
                             action: 'Open',
                             data: entry
                         }));
@@ -1718,13 +1759,25 @@
                     // Show "search web" option
                     const item = document.createElement('div');
                     item.className = 'command-palette-result-item';
-                    item.innerHTML = `
-                        <div class="command-palette-result-favicon"></div>
-                        <div class="command-palette-result-content">
-                            <div class="command-palette-result-title">Search the web</div>
-                            <div class="command-palette-result-url">Press Enter to search</div>
-                        </div>
-                    `;
+                    
+                    const faviconImg = document.createElement('img');
+                    faviconImg.className = 'command-palette-result-favicon';
+                    faviconImg.src = this.getFaviconUrl('https://www.google.com');
+                    faviconImg.alt = '';
+                    item.appendChild(faviconImg);
+                    
+                    const content = document.createElement('div');
+                    content.className = 'command-palette-result-content';
+                    const title = document.createElement('div');
+                    title.className = 'command-palette-result-title';
+                    title.textContent = 'Search the web';
+                    const url = document.createElement('div');
+                    url.className = 'command-palette-result-url';
+                    url.textContent = 'Press Enter to search';
+                    content.appendChild(title);
+                    content.appendChild(url);
+                    item.appendChild(content);
+                    
                     item.addEventListener('click', () => this.executeCommandPaletteAction());
                     this.commandPaletteResults.appendChild(item);
                 } else {
@@ -1735,18 +1788,52 @@
                             item.classList.add('selected');
                         }
                         
-                        const faviconHtml = result.favicon 
-                            ? `<img src="${result.favicon}" class="command-palette-result-favicon" />`
-                            : '<div class="command-palette-result-favicon"></div>';
+                        // Always try to show favicon (getFaviconUrl provides a fallback)
+                        const faviconUrl = result.favicon || this.getFaviconUrl(result.url);
+                        const resultUrl = result.url; // Store for closure
+                        if (faviconUrl) {
+                            const faviconImg = document.createElement('img');
+                            faviconImg.className = 'command-palette-result-favicon';
+                            faviconImg.src = faviconUrl;
+                            faviconImg.alt = '';
+                            faviconImg.onerror = function() {
+                                // If favicon fails to load, try direct domain favicon
+                                try {
+                                    const urlObj = new URL(resultUrl);
+                                    const domain = urlObj.hostname;
+                                    const directFavicon = `https://${domain}/favicon.ico`;
+                                    if (domain && this.src !== directFavicon) {
+                                        this.src = directFavicon;
+                                    } else {
+                                        this.style.display = 'none';
+                                    }
+                                } catch (e) {
+                                    this.style.display = 'none';
+                                }
+                            };
+                            item.appendChild(faviconImg);
+                        } else {
+                            const faviconDiv = document.createElement('div');
+                            faviconDiv.className = 'command-palette-result-favicon';
+                            item.appendChild(faviconDiv);
+                        }
                         
-                        item.innerHTML = `
-                            ${faviconHtml}
-                            <div class="command-palette-result-content">
-                                <div class="command-palette-result-title">${this.escapeHtml(result.title)}</div>
-                                <div class="command-palette-result-url">${this.escapeHtml(result.url)}</div>
-                            </div>
-                            <div class="command-palette-result-action">${result.action} →</div>
-                        `;
+                        const content = document.createElement('div');
+                        content.className = 'command-palette-result-content';
+                        const title = document.createElement('div');
+                        title.className = 'command-palette-result-title';
+                        title.textContent = result.title;
+                        const url = document.createElement('div');
+                        url.className = 'command-palette-result-url';
+                        url.textContent = result.url;
+                        content.appendChild(title);
+                        content.appendChild(url);
+                        item.appendChild(content);
+                        
+                        const action = document.createElement('div');
+                        action.className = 'command-palette-result-action';
+                        action.textContent = `${result.action} →`;
+                        item.appendChild(action);
                         
                         item.addEventListener('click', async () => {
                             if (result.type === 'tab') {
