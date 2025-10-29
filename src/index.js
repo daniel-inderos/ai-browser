@@ -376,6 +376,26 @@ const createMenu = () => {
           }
         },
         {
+          label: 'Back',
+          accelerator: 'CmdOrCtrl+Left',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('navigate-back');
+            }
+          }
+        },
+        {
+          label: 'Forward',
+          accelerator: 'CmdOrCtrl+Right',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('navigate-forward');
+            }
+          }
+        },
+        {
           label: 'Refresh',
           accelerator: 'CmdOrCtrl+R',
           click: () => {
