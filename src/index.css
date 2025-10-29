@@ -957,6 +957,33 @@ webview {
     }
 }
 
+/* Toast Notification */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    z-index: 10000;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all var(--transition-normal);
+    pointer-events: none;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+
+.toast-notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -964,22 +991,27 @@ webview {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
-    
+
     .loading-spinner {
         animation: none;
     }
-    
+
     .loading-spinner::after {
         content: '⟳';
         display: block;
         text-align: center;
         line-height: 1;
     }
+
+    .toast-notification {
+        transition: none;
+    }
 }
 
 /* Chat and Summarize Buttons */
 .chat-btn,
-.summarize-btn {
+.summarize-btn,
+.copy-url-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -998,7 +1030,8 @@ webview {
 }
 
 .chat-btn:hover:not(:disabled),
-.summarize-btn:hover:not(:disabled) {
+.summarize-btn:hover:not(:disabled),
+.copy-url-btn:hover:not(:disabled) {
     background: var(--color-surface-hover);
     border-color: var(--color-border-hover);
     color: var(--color-text-primary);
@@ -1007,20 +1040,23 @@ webview {
 }
 
 .chat-btn:active:not(:disabled),
-.summarize-btn:active:not(:disabled) {
+.summarize-btn:active:not(:disabled),
+.copy-url-btn:active:not(:disabled) {
     transform: translateY(0);
     box-shadow: var(--shadow-sm);
 }
 
 .chat-btn:disabled,
-.summarize-btn:disabled {
+.summarize-btn:disabled,
+.copy-url-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
     pointer-events: none;
 }
 
 .chat-btn svg,
-.summarize-btn svg {
+.summarize-btn svg,
+.copy-url-btn svg {
     stroke-width: 2;
 }
 

@@ -1,7 +1,7 @@
 // Load environment variables
 require('dotenv').config();
 
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, clipboard, globalShortcut } = require('electron');
 const path = require('node:path');
 const { initialize, enable } = require('@electron/remote/main');
 const { streamChat } = require('./openaiHelper');
@@ -246,6 +246,43 @@ ipcMain.handle('chats-clear', async () => {
   return { success: true };
 });
 
+ipcMain.handle('get-current-url', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) {
+    return { success: false, error: 'Window not found' };
+  }
+
+  // Find the active webview by checking all webContents in the window
+  const webContents = window.webContents;
+  const allWebContents = webContents.getAllWebContents();
+
+  // Look for webview webContents that are not the main window
+  for (const wc of allWebContents) {
+    if (wc !== webContents && wc.getType() === 'webview') {
+      try {
+        const url = wc.getURL();
+        if (url && !url.includes('chrome-devtools://')) {
+          return { success: true, url };
+        }
+      } catch (error) {
+        console.error('Error getting URL from webview:', error);
+      }
+    }
+  }
+
+  return { success: false, error: 'No active webview found' };
+});
+
+ipcMain.handle('copy-to-clipboard', async (event, text) => {
+  try {
+    clipboard.writeText(text);
+    return { success: true };
+  } catch (error) {
+    console.error('Error copying to clipboard:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 
 // Create application menu
 const createMenu = () => {
@@ -391,6 +428,18 @@ const createMenu = () => {
           }
         },
         { type: 'separator' },
+        {
+          label: 'Copy Current URL',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              // Send request to renderer to handle URL copying
+              focusedWindow.webContents.send('copy-current-url');
+            }
+          }
+        },
+        { type: 'separator' },
         // Tab selection like Chrome: Cmd/Ctrl + 1-9
         ...Array.from({ length: 9 }, (_, i) => ({
           label: i === 8 ? 'Switch to Last Tab' : `Switch to Tab ${i + 1}`,
@@ -418,7 +467,17 @@ app.whenReady().then(() => {
   console.log('Creating menu...');
   createMenu();
 
-  // On OS X it's common to re-create a window in the app when the
+  // Register global shortcuts
+  globalShortcut.register('CommandOrControl+Shift+C', () => {
+    console.log('Global shortcut Cmd+Shift+C triggered');
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow) {
+      console.log('Sending copy-current-url to focused window');
+      focusedWindow.webContents.send('copy-current-url');
+    }
+  });
+
+  // On OS X it's common to re-create a window in the
   // dock icon is clicked and there are no other windows open.
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -432,4 +491,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Unregister global shortcuts before quitting
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });

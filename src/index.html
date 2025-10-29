@@ -64,6 +64,12 @@
                             <line x1="3" y1="18" x2="3" y2="18" />
                         </svg>
                     </button>
+                    <button class="copy-url-btn" id="copyUrlBtn" title="Copy URL (⌘⇧C)" aria-label="Copy current URL">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                        </svg>
+                    </button>
                 </div>
                 <div class="url-input-wrapper">
                     <input type="url" 
@@ -330,6 +336,7 @@
                 this.urlBarContainer = document.querySelector('.url-bar-container');
                 this.chatBtn = document.getElementById('chatBtn');
                 this.summarizeBtn = document.getElementById('summarizeBtn');
+                this.copyUrlBtn = document.getElementById('copyUrlBtn');
                 this.chatSidebar = document.getElementById('chatSidebar');
                 this.chatInput = document.getElementById('chatInput');
                 this.chatInputForm = document.getElementById('chatInputForm');
@@ -894,6 +901,11 @@
                     this.summarizeBtn.addEventListener('click', () => this.handleSummarizePage());
                 }
 
+                // Copy URL button
+                if (this.copyUrlBtn) {
+                    this.copyUrlBtn.addEventListener('click', () => this.copyCurrentUrl());
+                }
+
                 // Chat form submission
                 if (this.chatInputForm) {
                     this.chatInputForm.addEventListener('submit', (e) => {
@@ -929,7 +941,9 @@
                 // Tab numeric selection from menu accelerators
                 window.electronAPI.onSelectTab(({ index }) => this.selectTabByNumber(index));
                 window.electronAPI.onShowHistory(() => this.showHistory());
-                
+                window.electronAPI.onCopyCurrentUrl(() => this.copyCurrentUrl());
+                window.electronAPI.onUrlCopied((url) => this.showToast('URL copied to clipboard'));
+
                 // Listen for IPC messages to open links in tabs
                 window.electronAPI.onOpenInTab((url) => {
                     console.log('Received open-in-tab IPC:', url);
@@ -974,6 +988,12 @@
                             case 'y':
                                 e.preventDefault();
                                 this.showHistory();
+                                break;
+                            case 'C':
+                                if (e.shiftKey) {
+                                    e.preventDefault();
+                                    this.copyCurrentUrl();
+                                }
                                 break;
                             default: {
                                 // Number keys 1-9 to switch tabs like Chrome
@@ -2167,6 +2187,35 @@
                 }
             }
 
+            showToast(message) {
+                // Remove any existing toast
+                const existingToast = document.querySelector('.toast-notification');
+                if (existingToast) {
+                    existingToast.remove();
+                }
+
+                // Create new toast
+                const toast = document.createElement('div');
+                toast.className = 'toast-notification';
+                toast.textContent = message;
+                document.body.appendChild(toast);
+
+                // Show toast
+                requestAnimationFrame(() => {
+                    toast.classList.add('show');
+                });
+
+                // Hide after 2 seconds
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.remove();
+                        }
+                    }, 300); // Wait for fade out animation
+                }, 2000);
+            }
+
             showChatSidebar() {
                 if (!this.chatSidebar) return;
                 const currentTab = this.tabs.find(t => t.id === this.activeTabId);
@@ -2358,11 +2407,31 @@
                 // Create or switch to history tab
                 const historyUrl = 'history.html';
                 const existingTab = this.tabs.find(t => t.url && t.url.includes('history.html'));
-                
+
                 if (existingTab) {
                     this.switchToTab(existingTab.id);
                 } else {
                     await this.createTab(historyUrl);
+                }
+            }
+
+            async copyCurrentUrl() {
+                try {
+                    const activeTab = this.tabs.find(tab => tab.id === this.activeTabId);
+                    if (!activeTab || !activeTab.webview) {
+                        console.error('No active tab or webview found');
+                        return;
+                    }
+
+                    const url = activeTab.webview.getURL();
+                    if (url) {
+                        await window.electronAPI.copyToClipboard(url);
+                        this.showToast('URL copied to clipboard');
+                    } else {
+                        console.error('Failed to get URL from webview');
+                    }
+                } catch (error) {
+                    console.error('Error copying URL:', error);
                 }
             }
 

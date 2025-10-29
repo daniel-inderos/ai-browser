@@ -55,5 +55,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openLinkInNewTab: (url) => ipcRenderer.sendToHost('open-link', { url }),
   
   // Listen for IPC messages from main process
-  onOpenInTab: (callback) => ipcRenderer.on('open-in-tab', (_e, url) => callback(url))
+  onOpenInTab: (callback) => ipcRenderer.on('open-in-tab', (_e, url) => callback(url)),
+
+  // URL copying functionality
+  getCurrentUrl: () => ipcRenderer.invoke('get-current-url'),
+  copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
+  onCopyCurrentUrl: (callback) => ipcRenderer.on('copy-current-url', callback),
+  onUrlCopied: (callback) => ipcRenderer.on('url-copied', (_e, url) => callback(url))
 });
