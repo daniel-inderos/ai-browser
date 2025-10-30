@@ -63,9 +63,25 @@ const configureSessionCookies = async () => {
   // The 'persist:' prefix automatically enables persistent cookie storage
   const defaultSession = session.fromPartition('persist:browser');
   
-  // Configure session to ensure cookies are enabled and persisted
-  // Cookies are enabled by default, but accessing the session here ensures
-  // it's properly initialized before any windows or webviews use it
+  // CRITICAL: Ensure the session is fully initialized and persisted
+  // Accessing the session here ensures it's properly initialized before any windows or webviews use it
+  // This is essential for localStorage and cookie persistence
+  
+  // Explicitly configure storage persistence
+  // In Electron, accessing the session and cookies API ensures proper initialization
+  try {
+    // Trigger session initialization by accessing cookies
+    const cookies = await defaultSession.cookies.get({});
+    console.log(`Session initialized with ${cookies.length} existing cookies`);
+    
+    // Verify session persistence path (for debugging)
+    const sessionPath = defaultSession.getStoragePath?.();
+    if (sessionPath) {
+      console.log('Session storage path:', sessionPath);
+    }
+  } catch (error) {
+    console.error('Error initializing session:', error);
+  }
   
   // Optional: Monitor cookie changes for debugging (can be removed in production)
   defaultSession.cookies.on('changed', (event, cookie, cause, removed) => {
@@ -78,7 +94,7 @@ const configureSessionCookies = async () => {
     }
   });
 
-  console.log('Cookie persistence enabled for browser session');
+  console.log('Cookie and localStorage persistence enabled for browser session');
   
   // Initialize ad blocker with the default session
   await adBlocker.initializeAdBlocker(defaultSession);

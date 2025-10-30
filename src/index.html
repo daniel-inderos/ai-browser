@@ -209,11 +209,11 @@
                 this.sidebarCollapsed = false;
                 this.sidebarHoveredWhileCollapsed = false;
                 this.history = []; // Browser history for suggestions
+                this.partition = null; // Cache partition to avoid async calls
                 
                 this.initializeElements();
                 this.setupResizableSidebars();
                 this.setupEventListeners();
-                this.createInitialTab();
                 this.setupKeyboardShortcuts();
                 this.chatSessions = new Map();
                 this.marked = window.marked;
@@ -226,12 +226,28 @@
                     this.summarizeBtn.style.display = 'flex';
                 }
                 
-                // Show incognito indicator if in incognito mode (async)
-                this.checkIncognitoMode();
+                // Initialize partition and incognito mode before creating initial tab
+                this.initializePartition().then(() => {
+                    this.createInitialTab();
+                });
                 
                 // Load history for command palette suggestions
                 this.loadHistory();
                 
+            }
+            
+            async initializePartition() {
+                try {
+                    // Show incognito indicator if in incognito mode
+                    await this.checkIncognitoMode();
+                    // Cache partition synchronously for future use
+                    this.partition = await window.electronAPI.getPartition();
+                    console.log('Partition initialized:', this.partition);
+                } catch (error) {
+                    console.error('Error initializing partition:', error);
+                    // Fallback to default partition
+                    this.partition = 'persist:browser';
+                }
             }
             
             async checkIncognitoMode() {
@@ -1257,8 +1273,15 @@
                 webview.setAttribute('webpreferences', 'contextIsolation=true');
                 webview.setAttribute('preload', `file://${preloadPath}`);
                 webview.setAttribute('useragent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 AI-Browser/1.0');
-                // Use the partition from the parent window (shared across all tabs in incognito)
-                const partition = await window.electronAPI.getPartition();
+                
+                // Use cached partition or fetch if not available (should be cached during initialization)
+                // CRITICAL: Partition MUST be set before any navigation or src attribute
+                let partition = this.partition;
+                if (!partition) {
+                    console.warn('Partition not cached, fetching synchronously...');
+                    partition = await window.electronAPI.getPartition();
+                    this.partition = partition; // Cache for future use
+                }
                 webview.setAttribute('partition', partition);
                 
                 // Handle new window requests BEFORE navigation starts
@@ -1270,8 +1293,16 @@
                     }
                 });
                 
-                // Also handle window.open calls
+                // Also handle window.open calls and validate partition
                 webview.addEventListener('did-attach', () => {
+                    // Validate partition is set correctly
+                    const actualPartition = webview.getAttribute('partition');
+                    if (actualPartition !== partition) {
+                        console.error(`Partition mismatch! Expected: ${partition}, Actual: ${actualPartition}`);
+                    } else {
+                        console.log(`Webview attached with partition: ${partition}`);
+                    }
+                    
                     try {
                         webview.executeJavaScript(`
                             (function() {
