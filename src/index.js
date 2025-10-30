@@ -649,6 +649,90 @@ const createMenu = () => {
   Menu.setApplicationMenu(menu);
 };
 
+// Set up global context menu handler for all webContents (including webviews)
+app.on('web-contents-created', (event, webContents) => {
+  // Only handle webview webContents
+  if (webContents.getType() === 'webview') {
+    // Check if handler already attached to avoid duplicates
+    if (webContents._contextMenuHandlerAttached) {
+      return;
+    }
+    webContents._contextMenuHandlerAttached = true;
+    
+    webContents.on('context-menu', (event, params) => {
+      // Find the parent BrowserWindow for this webview
+      const allWindows = BrowserWindow.getAllWindows();
+      let parentWindow = null;
+      
+      // Try to find the parent window by checking all windows' webContents
+      for (const win of allWindows) {
+        try {
+          const allWebContents = win.webContents.getAllWebContents();
+          if (allWebContents.includes(webContents)) {
+            parentWindow = win;
+            break;
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+
+      // Build context menu
+      const contextMenu = Menu.buildFromTemplate([
+        { role: 'cut', label: 'Cut', enabled: params.editFlags.canCut },
+        { role: 'copy', label: 'Copy', enabled: params.editFlags.canCopy },
+        { role: 'paste', label: 'Paste', enabled: params.editFlags.canPaste },
+        { type: 'separator' },
+        { role: 'selectAll', label: 'Select All', enabled: params.editFlags.canSelectAll },
+        ...(params.linkURL ? [
+          { type: 'separator' },
+          {
+            label: 'Open Link in New Tab',
+            click: () => {
+              if (parentWindow) {
+                parentWindow.webContents.send('open-in-tab', params.linkURL);
+              }
+            }
+          },
+          {
+            label: 'Copy Link Address',
+            click: () => {
+              clipboard.writeText(params.linkURL);
+            }
+          }
+        ] : []),
+        ...(params.hasImageContents ? [
+          { type: 'separator' },
+          {
+            label: 'Copy Image',
+            click: () => {
+              webContents.copyImageAt(params.x, params.y);
+            }
+          },
+          {
+            label: 'Copy Image Address',
+            enabled: !!params.srcURL,
+            click: () => {
+              if (params.srcURL) {
+                clipboard.writeText(params.srcURL);
+              }
+            }
+          }
+        ] : []),
+        ...(params.isEditable ? [] : [
+          { type: 'separator' },
+          { role: 'reload', label: 'Reload' },
+          { role: 'forceReload', label: 'Force Reload' },
+          { role: 'toggleDevTools', label: 'Inspect Element' }
+        ])
+      ]);
+
+      // Show the context menu
+      contextMenu.popup();
+    });
+  }
+});
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(async () => {
