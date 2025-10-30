@@ -8,6 +8,7 @@ const CHATS_FILE = path.join(STORAGE_DIR, 'chats.json');
 const WINDOW_STATE_FILE = path.join(STORAGE_DIR, 'windowState.json');
 const TABS_FILE = path.join(STORAGE_DIR, 'tabs.json');
 const ADBLOCKER_FILE = path.join(STORAGE_DIR, 'adblocker.json');
+const EXTENSIONS_FILE = path.join(STORAGE_DIR, 'extensions.json');
 
 // Ensure storage directory exists
 function ensureStorageDir() {
@@ -215,6 +216,33 @@ function saveAdBlockerSettings(settings) {
   }
 }
 
+// Extension management
+function loadExtensions() {
+  ensureStorageDir();
+  try {
+    if (fs.existsSync(EXTENSIONS_FILE)) {
+      const data = fs.readFileSync(EXTENSIONS_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading extensions:', error);
+  }
+  return [];
+}
+
+function saveExtensions(extensions) {
+  ensureStorageDir();
+  try {
+    const normalized = Array.isArray(extensions) ? extensions : [];
+    fs.writeFileSync(EXTENSIONS_FILE, JSON.stringify(normalized, null, 2));
+  } catch (error) {
+    console.error('Error saving extensions:', error);
+  }
+}
+
 module.exports = {
   loadHistory,
   saveHistory,
@@ -231,6 +259,8 @@ module.exports = {
   loadTabs,
   saveTabs,
   loadAdBlockerSettings,
-  saveAdBlockerSettings
+  saveAdBlockerSettings,
+  loadExtensions,
+  saveExtensions
 };
 

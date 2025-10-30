@@ -277,6 +277,10 @@
                 // Create new tab with settings
                 this.createTab('settings.html');
             }
+
+            showExtensions() {
+                this.createTab('extensions.html');
+            }
             
             getDisplayUrl(url) {
                 return url || '';
@@ -388,6 +392,9 @@
                 // Listen for IPC messages from main process
                 window.electronAPI.onShowSettings(() => {
                     this.showSettings();
+                });
+                window.electronAPI.onShowExtensions(() => {
+                    this.showExtensions();
                 });
                 
                 // Listen for messages from webviews
@@ -1008,6 +1015,12 @@
                             case 'e':
                                 e.preventDefault();
                                 this.toggleChatSidebar();
+                                break;
+                            case 'E':
+                                if (e.shiftKey) {
+                                    e.preventDefault();
+                                    this.showExtensions();
+                                }
                                 break;
                             case 's':
                                 e.preventDefault();

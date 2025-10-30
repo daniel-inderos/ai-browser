@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extensions</title>
+    <link rel="icon" type="image/svg+xml" href="favicon-light.svg" media="(prefers-color-scheme: light)">
+    <link rel="icon" type="image/svg+xml" href="favicon-dark.svg" media="(prefers-color-scheme: dark)">
+    <link rel="stylesheet" href="index.css">
+    <style>
+        :root {
+            color-scheme: light dark;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: var(--color-background);
+            color: var(--color-text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .extensions-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--color-background);
+        }
+
+        .extensions-header {
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-surface-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-3);
+        }
+
+        .extensions-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            margin: 0;
+            color: var(--color-text-primary);
+        }
+
+        .extensions-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+
+        .extensions-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-4);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-3);
+        }
+
+        .status-banner {
+            padding: var(--spacing-3);
+            border-radius: var(--radius-md);
+            border: 1px solid transparent;
+            font-size: var(--font-size-sm);
+            display: none;
+        }
+
+        .status-banner.success {
+            display: block;
+            background: rgb(34 197 94 / 0.15);
+            border-color: rgb(34 197 94 / 0.3);
+            color: rgb(22 101 52);
+        }
+
+        .status-banner.error {
+            display: block;
+            background: rgb(248 113 113 / 0.15);
+            border-color: rgb(248 113 113 / 0.3);
+            color: rgb(153 27 27);
+        }
+
+        .extensions-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-3);
+        }
+
+        .extension-card {
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            background: var(--color-surface);
+            padding: var(--spacing-4);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-3);
+            box-shadow: 0 10px 30px rgb(15 23 42 / 0.05);
+        }
+
+        .extension-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: var(--spacing-3);
+        }
+
+        .extension-name {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-text-primary);
+            margin: 0;
+        }
+
+        .extension-version {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            margin-top: var(--spacing-1);
+        }
+
+        .extension-description {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .extension-meta {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-1);
+        }
+
+        .extension-path {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-tertiary);
+            word-break: break-all;
+        }
+
+        .extension-status {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+            flex-wrap: wrap;
+        }
+
+        .status-chip {
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+            letter-spacing: 0.02em;
+        }
+
+        .status-chip.enabled {
+            background: rgb(34 197 94 / 0.15);
+            color: rgb(21 128 61);
+        }
+
+        .status-chip.disabled {
+            background: rgb(148 163 184 / 0.2);
+            color: rgb(71 85 105);
+        }
+
+        .status-chip.error {
+            background: rgb(248 113 113 / 0.15);
+            color: rgb(220 38 38);
+        }
+
+        .extension-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-3);
+            flex-wrap: wrap;
+        }
+
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--color-border);
+            transition: 0.2s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: rgb(96 165 250);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .toggle-switch input:disabled + .toggle-slider {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-2);
+            border-radius: var(--radius-md);
+            border: 1px solid transparent;
+            padding: 0.5rem 0.9rem;
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            cursor: pointer;
+            background: transparent;
+            color: var(--color-text-primary);
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .button.primary {
+            background: rgb(96 165 250 / 0.15);
+            border-color: rgb(96 165 250 / 0.4);
+            color: rgb(29 78 216);
+        }
+
+        .button.primary:hover {
+            background: rgb(59 130 246 / 0.2);
+            border-color: rgb(59 130 246 / 0.5);
+        }
+
+        .button.secondary {
+            border-color: var(--color-border);
+        }
+
+        .button.secondary:hover {
+            background: var(--color-surface-elevated);
+        }
+
+        .button.danger {
+            background: rgb(248 113 113 / 0.12);
+            border-color: rgb(248 113 113 / 0.3);
+            color: rgb(185 28 28);
+        }
+
+        .button.danger:hover {
+            background: rgb(248 113 113 / 0.18);
+            border-color: rgb(239 68 68 / 0.4);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-6) var(--spacing-4);
+            border: 1px dashed var(--color-border);
+            border-radius: var(--radius-lg);
+            color: var(--color-text-secondary);
+            display: none;
+        }
+
+        .empty-state.visible {
+            display: block;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgb(255 255 255 / 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+            z-index: 10;
+            color: var(--color-text-primary);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .loading-overlay.visible {
+            display: flex;
+        }
+
+        .error-text {
+            font-size: var(--font-size-xs);
+            color: rgb(220 38 38);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .toggle-slider:before {
+                background-color: var(--color-surface-elevated);
+            }
+            .status-banner.success {
+                color: rgb(187 247 208);
+            }
+            .status-banner.error {
+                color: rgb(254 205 211);
+            }
+            .loading-overlay {
+                background: rgb(15 23 42 / 0.6);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="extensions-container">
+        <div class="extensions-header">
+            <h1 class="extensions-title">Extensions</h1>
+            <div class="extensions-actions">
+                <button class="button secondary" id="refreshExtensionsButton" title="Refresh extensions list">
+                    Refresh
+                </button>
+                <button class="button primary" id="loadExtensionButton" title="Load unpacked extension">
+                    Load Unpacked
+                </button>
+            </div>
+        </div>
+        <div class="extensions-content">
+            <div id="statusMessage" class="status-banner" role="status" aria-live="polite"></div>
+            <div id="extensionsList" class="extensions-list" aria-live="polite"></div>
+            <div id="emptyState" class="empty-state">
+                <p>No extensions installed yet.</p>
+                <p>Click <strong>Load Unpacked</strong> to install an unpacked Chrome extension.</p>
+            </div>
+        </div>
+    </div>
+    <div id="loadingOverlay" class="loading-overlay">Working...</div>
+
+    <script>
+        class ExtensionsManager {
+            constructor() {
+                this.elements = {
+                    list: document.getElementById('extensionsList'),
+                    emptyState: document.getElementById('emptyState'),
+                    status: document.getElementById('statusMessage'),
+                    loadButton: document.getElementById('loadExtensionButton'),
+                    refreshButton: document.getElementById('refreshExtensionsButton'),
+                    overlay: document.getElementById('loadingOverlay')
+                };
+                this.messageTimeout = null;
+                this.bindEvents();
+                this.refreshExtensions();
+            }
+
+            bindEvents() {
+                if (this.elements.loadButton) {
+                    this.elements.loadButton.addEventListener('click', async () => {
+                        await this.handleInstallExtension();
+                    });
+                }
+
+                if (this.elements.refreshButton) {
+                    this.elements.refreshButton.addEventListener('click', async () => {
+                        await this.refreshExtensions();
+                    });
+                }
+            }
+
+            setLoading(isLoading) {
+                if (!this.elements.overlay) return;
+                if (isLoading) {
+                    this.elements.overlay.classList.add('visible');
+                } else {
+                    this.elements.overlay.classList.remove('visible');
+                }
+            }
+
+            showMessage(message, type = 'success') {
+                if (!this.elements.status) return;
+                this.elements.status.textContent = message;
+                this.elements.status.classList.remove('success', 'error');
+                this.elements.status.classList.add(type === 'error' ? 'error' : 'success');
+
+                if (this.messageTimeout) {
+                    clearTimeout(this.messageTimeout);
+                }
+                this.messageTimeout = setTimeout(() => {
+                    if (this.elements.status) {
+                        this.elements.status.classList.remove('success', 'error');
+                        this.elements.status.textContent = '';
+                    }
+                }, 4000);
+            }
+
+            clearMessage() {
+                if (this.messageTimeout) {
+                    clearTimeout(this.messageTimeout);
+                }
+                if (this.elements.status) {
+                    this.elements.status.classList.remove('success', 'error');
+                    this.elements.status.textContent = '';
+                }
+            }
+
+            async refreshExtensions() {
+                this.clearMessage();
+                this.setLoading(true);
+                try {
+                    const extensions = await window.electronAPI.getExtensions();
+                    this.renderExtensions(Array.isArray(extensions) ? extensions : []);
+                } catch (error) {
+                    console.error('Failed to load extensions:', error);
+                    this.renderExtensions([]);
+                    this.showMessage(error.message || 'Failed to load extensions', 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            renderExtensions(extensions) {
+                if (!this.elements.list || !this.elements.emptyState) {
+                    return;
+                }
+
+                this.elements.list.innerHTML = '';
+
+                if (!extensions.length) {
+                    this.elements.emptyState.classList.add('visible');
+                    return;
+                }
+
+                this.elements.emptyState.classList.remove('visible');
+
+                extensions.forEach((extension) => {
+                    const card = this.createExtensionCard(extension);
+                    this.elements.list.appendChild(card);
+                });
+            }
+
+            createExtensionCard(extension) {
+                const card = document.createElement('div');
+                card.className = 'extension-card';
+                card.dataset.extensionId = extension.id || '';
+
+                const header = document.createElement('div');
+                header.className = 'extension-card-header';
+
+                const meta = document.createElement('div');
+                meta.className = 'extension-meta';
+
+                const title = document.createElement('h2');
+                title.className = 'extension-name';
+                title.textContent = extension.name || 'Unknown Extension';
+
+                const version = document.createElement('div');
+                version.className = 'extension-version';
+                version.textContent = `Version ${extension.version || '0'}`;
+
+                meta.appendChild(title);
+                meta.appendChild(version);
+
+                const statusContainer = document.createElement('div');
+                statusContainer.className = 'extension-status';
+
+                const enabledChip = document.createElement('span');
+                enabledChip.className = `status-chip ${extension.enabled ? 'enabled' : 'disabled'}`;
+                enabledChip.textContent = extension.enabled ? 'Enabled' : 'Disabled';
+                statusContainer.appendChild(enabledChip);
+
+                if (extension.isLoaded === false && extension.enabled) {
+                    const unloadedChip = document.createElement('span');
+                    unloadedChip.className = 'status-chip error';
+                    unloadedChip.textContent = 'Not Loaded';
+                    statusContainer.appendChild(unloadedChip);
+                }
+
+                if (extension.lastError) {
+                    const errorChip = document.createElement('span');
+                    errorChip.className = 'status-chip error';
+                    errorChip.textContent = 'Error';
+                    statusContainer.appendChild(errorChip);
+                }
+
+                header.appendChild(meta);
+                header.appendChild(statusContainer);
+
+                const description = document.createElement('p');
+                description.className = 'extension-description';
+                description.textContent = extension.description || 'No description provided.';
+
+                const pathInfo = document.createElement('div');
+                pathInfo.className = 'extension-path';
+                pathInfo.textContent = extension.path || 'Unknown path';
+                if (extension.path) {
+                    pathInfo.title = extension.path;
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'extension-actions';
+
+                const toggleWrapper = document.createElement('label');
+                toggleWrapper.className = 'toggle-switch';
+
+                const toggleInput = document.createElement('input');
+                toggleInput.type = 'checkbox';
+                toggleInput.checked = Boolean(extension.enabled);
+                toggleInput.disabled = Boolean(extension.locked);
+
+                const toggleSlider = document.createElement('span');
+                toggleSlider.className = 'toggle-slider';
+
+                toggleWrapper.appendChild(toggleInput);
+                toggleWrapper.appendChild(toggleSlider);
+
+                const toggleLabel = document.createElement('span');
+                toggleLabel.textContent = 'Enabled';
+                toggleLabel.style.fontSize = 'var(--font-size-sm)';
+                toggleLabel.style.color = 'var(--color-text-secondary)';
+
+                const toggleGroup = document.createElement('div');
+                toggleGroup.style.display = 'flex';
+                toggleGroup.style.alignItems = 'center';
+                toggleGroup.style.gap = '10px';
+                toggleGroup.appendChild(toggleWrapper);
+                toggleGroup.appendChild(toggleLabel);
+
+                const buttons = document.createElement('div');
+                buttons.className = 'action-buttons';
+
+                const reloadButton = document.createElement('button');
+                reloadButton.className = 'button secondary';
+                reloadButton.textContent = 'Reload';
+                reloadButton.title = 'Reload extension';
+                reloadButton.addEventListener('click', async () => {
+                    await this.handleReloadExtension(extension, reloadButton);
+                });
+
+                const removeButton = document.createElement('button');
+                removeButton.className = 'button danger';
+                removeButton.textContent = 'Remove';
+                removeButton.title = 'Remove extension';
+                removeButton.addEventListener('click', async () => {
+                    await this.handleRemoveExtension(extension, removeButton);
+                });
+
+                buttons.appendChild(reloadButton);
+                buttons.appendChild(removeButton);
+
+                actions.appendChild(toggleGroup);
+                actions.appendChild(buttons);
+
+                if (extension.lastError) {
+                    const errorText = document.createElement('div');
+                    errorText.className = 'error-text';
+                    errorText.textContent = extension.lastError;
+                    actions.appendChild(errorText);
+                }
+
+                toggleInput.addEventListener('change', async (event) => {
+                    await this.handleToggleExtension(extension, event.target.checked, toggleInput);
+                });
+
+                card.appendChild(header);
+                card.appendChild(description);
+                card.appendChild(pathInfo);
+                card.appendChild(actions);
+
+                return card;
+            }
+
+            async handleInstallExtension() {
+                try {
+                    const selection = await window.electronAPI.selectExtensionDirectory();
+                    if (!selection || selection.canceled || !selection.path) {
+                        return;
+                    }
+
+                    this.setLoading(true);
+                    const extension = await window.electronAPI.installExtension(selection.path);
+                    this.showMessage(`${extension.name || 'Extension'} installed successfully.`);
+                    await this.refreshExtensions();
+                } catch (error) {
+                    console.error('Failed to install extension:', error);
+                    this.showMessage(error.message || 'Failed to install extension', 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            async handleToggleExtension(extension, shouldEnable, toggleInput) {
+                if (!extension || !extension.id) {
+                    this.showMessage('Extension id is missing. Try reloading.', 'error');
+                    toggleInput.checked = !shouldEnable;
+                    return;
+                }
+
+                toggleInput.disabled = true;
+                try {
+                    await window.electronAPI.setExtensionEnabled(extension.id, shouldEnable);
+                    const action = shouldEnable ? 'enabled' : 'disabled';
+                    this.showMessage(`${extension.name || 'Extension'} ${action}.`);
+                    await this.refreshExtensions();
+                } catch (error) {
+                    console.error('Failed to toggle extension:', error);
+                    this.showMessage(error.message || 'Failed to update extension state', 'error');
+                    toggleInput.checked = !shouldEnable;
+                } finally {
+                    toggleInput.disabled = false;
+                }
+            }
+
+            async handleReloadExtension(extension, button) {
+                if (!extension || !extension.id) {
+                    this.showMessage('Extension id is missing. Try reinstalling.', 'error');
+                    return;
+                }
+                button.disabled = true;
+                try {
+                    await window.electronAPI.setExtensionEnabled(extension.id, false);
+                    await window.electronAPI.setExtensionEnabled(extension.id, true);
+                    this.showMessage(`${extension.name || 'Extension'} reloaded.`);
+                    await this.refreshExtensions();
+                } catch (error) {
+                    console.error('Failed to reload extension:', error);
+                    this.showMessage(error.message || 'Failed to reload extension', 'error');
+                } finally {
+                    button.disabled = false;
+                }
+            }
+
+            async handleRemoveExtension(extension, button) {
+                if (!extension || !extension.id) {
+                    this.showMessage('Extension id is missing. Try reloading.', 'error');
+                    return;
+                }
+
+                const confirmed = window.confirm(`Remove "${extension.name || 'this extension'}"?`);
+                if (!confirmed) {
+                    return;
+                }
+
+                button.disabled = true;
+                try {
+                    await window.electronAPI.removeExtension(extension.id);
+                    this.showMessage(`${extension.name || 'Extension'} removed.`);
+                    await this.refreshExtensions();
+                } catch (error) {
+                    console.error('Failed to remove extension:', error);
+                    this.showMessage(error.message || 'Failed to remove extension', 'error');
+                } finally {
+                    button.disabled = false;
+                }
+            }
+        }
+
+        let extensionsManager;
+        document.addEventListener('DOMContentLoaded', () => {
+            extensionsManager = new ExtensionsManager();
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (extensionsManager && extensionsManager.messageTimeout) {
+                clearTimeout(extensionsManager.messageTimeout);
+            }
+        });
+    </script>
+</body>
+</html>
+

@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSelectTab: (callback) => ipcRenderer.on('select-tab', (_e, data) => callback(data)),
   onShowHistory: (callback) => ipcRenderer.on('show-history', callback),
   onShowSettings: (callback) => ipcRenderer.on('show-settings', callback),
+  onShowExtensions: (callback) => ipcRenderer.on('show-extensions', callback),
 
   setWindowButtonsVisible: (visible) => ipcRenderer.invoke('set-window-buttons-visible', visible),
 
@@ -72,6 +73,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   isAdBlockerEnabled: () => ipcRenderer.invoke('ad-blocker-enabled'),
   toggleAdBlocker: (enabled) => ipcRenderer.invoke('ad-blocker-toggle', enabled),
   getAdBlockerStats: () => ipcRenderer.invoke('ad-blocker-stats'),
+
+  // Extensions
+  getExtensions: () => ipcRenderer.invoke('extensions-list'),
+  installExtension: (extensionPath) => ipcRenderer.invoke('extensions-install', extensionPath),
+  setExtensionEnabled: (id, enabled) => ipcRenderer.invoke('extensions-set-enabled', { id, enabled }),
+  removeExtension: (id) => ipcRenderer.invoke('extensions-remove', id),
+  selectExtensionDirectory: () => ipcRenderer.invoke('extensions-select-directory'),
 
   // Quit confirmation
   onShowQuitDialog: (callback) => ipcRenderer.on('show-quit-dialog', callback),

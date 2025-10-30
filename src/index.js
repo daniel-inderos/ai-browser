@@ -7,6 +7,7 @@ const { initialize, enable } = require('@electron/remote/main');
 const { streamChat } = require('./openaiHelper');
 const storageHelper = require('./storageHelper');
 const adBlocker = require('./adBlocker');
+const extensionManager = require('./extensionManager');
 
 // Initialize @electron/remote
 initialize();
@@ -98,6 +99,20 @@ const configureSessionCookies = async () => {
   
   // Initialize ad blocker with the default session
   await adBlocker.initializeAdBlocker(defaultSession);
+
+  try {
+    await extensionManager.initialize(defaultSession);
+  } catch (error) {
+    console.error('Failed to initialize extensions:', error);
+  }
+};
+
+const ensureExtensionsAllowed = (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window && window.isIncognito) {
+    throw new Error('Extensions are not available in incognito windows');
+  }
+  return window;
 };
 
 const createWindow = (isIncognito = false) => {
@@ -353,6 +368,10 @@ ipcMain.handle('navigate-to', async (event, url) => {
       url = `file://${path.join(__dirname, 'settings.html')}`;
       return { success: true, url };
     }
+    if (url.includes('extensions.html')) {
+      url = `file://${path.join(__dirname, 'extensions.html')}`;
+      return { success: true, url };
+    }
     // Basic URL validation and formatting
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       if (url.includes('.') && !url.includes(' ')) {
@@ -515,6 +534,72 @@ ipcMain.handle('ad-blocker-toggle', async (event, enabled) => {
 
 ipcMain.handle('ad-blocker-stats', async (event) => {
   return adBlocker.getAdBlockerStats();
+});
+
+// Extension management IPC handlers
+ipcMain.handle('extensions-list', async () => {
+  try {
+    return extensionManager.getExtensions();
+  } catch (error) {
+    console.error('Failed to list extensions:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('extensions-install', async (event, extensionPath) => {
+  ensureExtensionsAllowed(event);
+  try {
+    return await extensionManager.installExtension(extensionPath);
+  } catch (error) {
+    console.error('Failed to install extension:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('extensions-set-enabled', async (event, { id, enabled }) => {
+  ensureExtensionsAllowed(event);
+  if (!id || typeof enabled !== 'boolean') {
+    throw new Error('Invalid extension toggle request');
+  }
+
+  try {
+    if (enabled) {
+      return await extensionManager.enableExtension(id);
+    }
+    return await extensionManager.disableExtension(id);
+  } catch (error) {
+    console.error('Failed to update extension state:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('extensions-remove', async (event, id) => {
+  ensureExtensionsAllowed(event);
+  if (!id) {
+    throw new Error('Extension id is required');
+  }
+  try {
+    await extensionManager.removeExtension(id);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to remove extension:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('extensions-select-directory', async (event) => {
+  const window = ensureExtensionsAllowed(event);
+  const dialogOptions = {
+    title: 'Select Extension Directory',
+    properties: ['openDirectory', 'dontAddToRecent'],
+    message: 'Choose the root folder of the unpacked Chrome extension'
+  };
+
+  const result = await dialog.showOpenDialog(window || undefined, dialogOptions);
+  if (result.canceled || !result.filePaths.length) {
+    return { canceled: true, path: null };
+  }
+  return { canceled: false, path: result.filePaths[0] };
 });
 
 
@@ -691,6 +776,16 @@ const createMenu = () => {
             if (focusedWindow) {
               // Send request to renderer to handle URL copying
               focusedWindow.webContents.send('copy-current-url');
+            }
+          }
+        },
+        {
+          label: 'Extensions',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('show-extensions');
             }
           }
         },
