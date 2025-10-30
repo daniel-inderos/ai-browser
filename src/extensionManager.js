@@ -1,11 +1,34 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { app } = require('electron');
+const fetch = require('cross-fetch');
+const AdmZip = require('adm-zip');
 
 const storageHelper = require('./storageHelper');
 
 let browserSession = null;
 let extensions = [];
 const loadedExtensionIds = new Set();
+const fsPromises = fs.promises;
+
+const STORE_DOWNLOAD_BASE_URL = 'https://clients2.google.com/service/update2/crx';
+const DEFAULT_CHROME_VERSION = '120.0.6099.71';
+const getExtensionStorageRoot = () => path.join(app.getPath('userData'), 'extensions');
+const getStoreExtensionRoot = () => path.join(getExtensionStorageRoot(), 'chrome-store');
+
+const ensureDirectory = async (dirPath) => {
+  await fsPromises.mkdir(dirPath, { recursive: true });
+};
+
+const removeDirectoryIfExists = async (dirPath) => {
+  try {
+    await fsPromises.rm(dirPath, { recursive: true, force: true });
+  } catch (error) {
+    if (error && error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+};
 
 const sanitizeForStorage = (extension) => ({
   id: extension.id || null,
@@ -16,7 +39,9 @@ const sanitizeForStorage = (extension) => ({
   description: extension.description || '',
   lastError: extension.lastError || null,
   installedAt: extension.installedAt || null,
-  lastToggledAt: extension.lastToggledAt || null
+  lastToggledAt: extension.lastToggledAt || null,
+  source: extension.source || 'local',
+  storeExtensionId: extension.storeExtensionId || null
 });
 
 const ensureSession = () => {
@@ -39,7 +64,9 @@ const extensionDisplayInfo = (extension) => ({
   lastError: extension.lastError || null,
   installedAt: extension.installedAt || null,
   lastToggledAt: extension.lastToggledAt || null,
-  isLoaded: extension.id ? loadedExtensionIds.has(extension.id) : false
+  isLoaded: extension.id ? loadedExtensionIds.has(extension.id) : false,
+  source: extension.source || 'local',
+  storeExtensionId: extension.storeExtensionId || null
 });
 
 const updateExtensionFromLoaded = (extension, loadedExtension) => {
@@ -117,7 +144,9 @@ const initialize = async (sessionInstance) => {
         description: stored.description || '',
         lastError: stored.lastError || null,
         installedAt: stored.installedAt || null,
-        lastToggledAt: stored.lastToggledAt || null
+        lastToggledAt: stored.lastToggledAt || null,
+        source: stored.source || 'local',
+        storeExtensionId: stored.storeExtensionId || null
       }))
     : [];
 
@@ -165,8 +194,13 @@ const initialize = async (sessionInstance) => {
 
 const getExtensions = () => extensions.map(extensionDisplayInfo);
 
-const installExtension = async (extensionDirectory) => {
+const installExtension = async (extensionDirectory, options = {}) => {
   ensureSession();
+
+  const {
+    source = 'local',
+    storeExtensionId = null
+  } = options;
 
   if (!extensionDirectory || typeof extensionDirectory !== 'string') {
     throw new Error('A valid extension directory path is required');
@@ -199,6 +233,8 @@ const installExtension = async (extensionDirectory) => {
       loadedExtensionIds.delete(extension.id);
     }
     updateExtensionFromLoaded(extension, loadedExtension);
+    extension.source = source || extension.source || 'local';
+    extension.storeExtensionId = storeExtensionId || extension.storeExtensionId || null;
   } else {
     extension = {
       id: loadedExtension.id,
@@ -209,13 +245,116 @@ const installExtension = async (extensionDirectory) => {
       description: loadedExtension.manifest?.description || '',
       lastError: null,
       installedAt: Date.now(),
-      lastToggledAt: Date.now()
+      lastToggledAt: Date.now(),
+      source,
+      storeExtensionId
     };
     extensions.push(extension);
   }
 
   persistExtensions();
   return extensionDisplayInfo(extension);
+};
+
+const extractExtensionId = (input) => {
+  if (!input || typeof input !== 'string') {
+    return null;
+  }
+
+  const trimmed = input.trim();
+
+  if (/^[a-p]{32}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    const pathParts = url.pathname.split('/');
+    const idCandidate = pathParts[pathParts.length - 1];
+    if (idCandidate && /^[a-p]{32}$/.test(idCandidate)) {
+      return idCandidate;
+    }
+  } catch (error) {
+    // ignore parse errors
+  }
+
+  return null;
+};
+
+const downloadCrxBuffer = async (extensionId) => {
+  const params = new URLSearchParams({
+    response: 'redirect',
+    prodversion: DEFAULT_CHROME_VERSION,
+    acceptformat: 'crx3',
+    x: `id%3D${extensionId}%26installsource%3Dondemand%26uc`
+  });
+
+  const downloadUrl = `${STORE_DOWNLOAD_BASE_URL}?${params.toString()}`;
+  const response = await fetch(downloadUrl);
+
+  if (!response.ok) {
+    throw new Error(`Failed to download extension (status ${response.status})`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  if (buffer.length < 16 || buffer.slice(0, 4).toString() !== 'Cr24') {
+    throw new Error('Downloaded file is not a valid CRX package');
+  }
+
+  const version = buffer.readUInt32LE(4);
+  if (version !== 2 && version !== 3) {
+    throw new Error(`Unsupported CRX version: ${version}`);
+  }
+
+  const headerSize = buffer.readUInt32LE(8);
+  const zipStartOffset = 12 + headerSize;
+  if (zipStartOffset >= buffer.length) {
+    throw new Error('CRX header is corrupted');
+  }
+
+  return buffer.slice(zipStartOffset);
+};
+
+const extractCrxToDirectory = async (zipBuffer, extensionId) => {
+  const storeRoot = getStoreExtensionRoot();
+  await ensureDirectory(storeRoot);
+  const targetDir = path.join(storeRoot, extensionId);
+  await removeDirectoryIfExists(targetDir);
+  await ensureDirectory(targetDir);
+
+  try {
+    const zip = new AdmZip(zipBuffer);
+    zip.extractAllTo(targetDir, true);
+  } catch (error) {
+    await removeDirectoryIfExists(targetDir);
+    throw new Error('Failed to extract CRX package');
+  }
+
+  return targetDir;
+};
+
+const installExtensionFromStore = async (identifier) => {
+  ensureSession();
+
+  const extensionId = extractExtensionId(identifier);
+  if (!extensionId) {
+    throw new Error('Enter a valid Chrome Web Store URL or extension ID');
+  }
+
+  const zipBuffer = await downloadCrxBuffer(extensionId);
+  const extractedDir = await extractCrxToDirectory(zipBuffer, extensionId);
+
+  try {
+    const result = await installExtension(extractedDir, {
+      source: 'webstore',
+      storeExtensionId: extensionId
+    });
+    return result;
+  } catch (error) {
+    throw error;
+  }
 };
 
 const enableExtension = async (extensionId) => {
@@ -302,6 +441,7 @@ module.exports = {
   installExtension,
   enableExtension,
   disableExtension,
-  removeExtension
+  removeExtension,
+  installExtensionFromStore
 };
 

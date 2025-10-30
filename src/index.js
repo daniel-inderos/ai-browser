@@ -556,6 +556,16 @@ ipcMain.handle('extensions-install', async (event, extensionPath) => {
   }
 });
 
+ipcMain.handle('extensions-install-from-store', async (event, identifier) => {
+  ensureExtensionsAllowed(event);
+  try {
+    return await extensionManager.installExtensionFromStore(identifier);
+  } catch (error) {
+    console.error('Failed to install extension from Chrome Web Store:', error);
+    throw error;
+  }
+});
+
 ipcMain.handle('extensions-set-enabled', async (event, { id, enabled }) => {
   ensureExtensionsAllowed(event);
   if (!id || typeof enabled !== 'boolean') {

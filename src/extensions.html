@@ -49,6 +49,7 @@
             display: flex;
             align-items: center;
             gap: var(--spacing-2);
+            flex-wrap: wrap;
         }
 
         .extensions-content {
@@ -320,6 +321,27 @@
             color: rgb(220 38 38);
         }
 
+        .extensions-input {
+            min-width: 260px;
+            padding: 0.45rem 0.75rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-border);
+            background: var(--color-surface);
+            color: var(--color-text-primary);
+            font-size: var(--font-size-sm);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .extensions-input:focus {
+            outline: none;
+            border-color: rgb(96 165 250);
+            box-shadow: 0 0 0 3px rgb(96 165 250 / 0.25);
+        }
+
+        .extensions-input::placeholder {
+            color: var(--color-text-tertiary);
+        }
+
         @media (prefers-color-scheme: dark) {
             .toggle-slider:before {
                 background-color: var(--color-surface-elevated);
@@ -341,6 +363,10 @@
         <div class="extensions-header">
             <h1 class="extensions-title">Extensions</h1>
             <div class="extensions-actions">
+                <input type="text" class="extensions-input" id="webstoreInput" placeholder="Chrome Web Store URL or ID" aria-label="Chrome Web Store URL or ID">
+                <button class="button primary" id="installFromStoreButton" title="Install from Chrome Web Store">
+                    Install from Store
+                </button>
                 <button class="button secondary" id="refreshExtensionsButton" title="Refresh extensions list">
                     Refresh
                 </button>
@@ -369,6 +395,8 @@
                     status: document.getElementById('statusMessage'),
                     loadButton: document.getElementById('loadExtensionButton'),
                     refreshButton: document.getElementById('refreshExtensionsButton'),
+                    installFromStoreButton: document.getElementById('installFromStoreButton'),
+                    installInput: document.getElementById('webstoreInput'),
                     overlay: document.getElementById('loadingOverlay')
                 };
                 this.messageTimeout = null;
@@ -386,6 +414,21 @@
                 if (this.elements.refreshButton) {
                     this.elements.refreshButton.addEventListener('click', async () => {
                         await this.refreshExtensions();
+                    });
+                }
+
+                if (this.elements.installFromStoreButton) {
+                    this.elements.installFromStoreButton.addEventListener('click', async () => {
+                        await this.handleInstallFromStore();
+                    });
+                }
+
+                if (this.elements.installInput) {
+                    this.elements.installInput.addEventListener('keydown', async (event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            await this.handleInstallFromStore();
+                        }
                     });
                 }
             }
@@ -505,6 +548,18 @@
                     statusContainer.appendChild(errorChip);
                 }
 
+                if (extension.source && extension.source === 'webstore') {
+                    const sourceChip = document.createElement('span');
+                    sourceChip.className = 'status-chip enabled';
+                    sourceChip.textContent = 'Chrome Web Store';
+                    statusContainer.appendChild(sourceChip);
+                } else if (extension.source && extension.source !== 'local') {
+                    const sourceChip = document.createElement('span');
+                    sourceChip.className = 'status-chip disabled';
+                    sourceChip.textContent = extension.source;
+                    statusContainer.appendChild(sourceChip);
+                }
+
                 header.appendChild(meta);
                 header.appendChild(statusContainer);
 
@@ -578,6 +633,18 @@
                     errorText.className = 'error-text';
                     errorText.textContent = extension.lastError;
                     actions.appendChild(errorText);
+                }
+
+                if (extension.source === 'webstore' && extension.storeExtensionId) {
+                    const storeInfo = document.createElement('div');
+                    storeInfo.className = 'extension-path';
+                    storeInfo.textContent = `Store ID: ${extension.storeExtensionId}`;
+                    actions.appendChild(storeInfo);
+                } else if (extension.source && extension.source !== 'local') {
+                    const sourceInfo = document.createElement('div');
+                    sourceInfo.className = 'extension-path';
+                    sourceInfo.textContent = `Source: ${extension.source}`;
+                    actions.appendChild(sourceInfo);
                 }
 
                 toggleInput.addEventListener('change', async (event) => {
@@ -673,6 +740,32 @@
                     this.showMessage(error.message || 'Failed to remove extension', 'error');
                 } finally {
                     button.disabled = false;
+                }
+            }
+
+            async handleInstallFromStore() {
+                const input = this.elements.installInput;
+                if (!input) {
+                    return;
+                }
+
+                const value = input.value.trim();
+                if (!value) {
+                    this.showMessage('Enter a Chrome Web Store URL or extension ID.', 'error');
+                    return;
+                }
+
+                this.setLoading(true);
+                try {
+                    const extension = await window.electronAPI.installExtensionFromStore(value);
+                    input.value = '';
+                    this.showMessage(`${extension.name || 'Extension'} installed from Chrome Web Store.`);
+                    await this.refreshExtensions();
+                } catch (error) {
+                    console.error('Failed to install from web store:', error);
+                    this.showMessage(error.message || 'Failed to install from Chrome Web Store', 'error');
+                } finally {
+                    this.setLoading(false);
                 }
             }
         }
