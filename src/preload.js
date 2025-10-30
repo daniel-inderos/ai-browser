@@ -71,5 +71,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Ad blocker
   isAdBlockerEnabled: () => ipcRenderer.invoke('ad-blocker-enabled'),
   toggleAdBlocker: (enabled) => ipcRenderer.invoke('ad-blocker-toggle', enabled),
-  getAdBlockerStats: () => ipcRenderer.invoke('ad-blocker-stats')
+  getAdBlockerStats: () => ipcRenderer.invoke('ad-blocker-stats'),
+
+  // Quit confirmation
+  onShowQuitDialog: (callback) => ipcRenderer.on('show-quit-dialog', callback),
+  confirmQuit: () => ipcRenderer.send('quit-confirm'),
+  cancelQuit: () => ipcRenderer.send('quit-cancel')
 });

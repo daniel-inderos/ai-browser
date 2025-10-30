@@ -2682,10 +2682,103 @@
                         browser.saveTabs();
                     }
                 });
+
+                // Setup quit dialog
+                const quitDialog = document.getElementById('quitDialog');
+                const quitCancelBtn = document.getElementById('quitCancelBtn');
+                const quitConfirmBtn = document.getElementById('quitConfirmBtn');
+
+                function showQuitDialog() {
+                    if (quitDialog) {
+                        quitDialog.style.display = 'flex';
+                        // Focus the cancel button for accessibility
+                        if (quitCancelBtn) {
+                            quitCancelBtn.focus();
+                        }
+                    }
+                }
+
+                function hideQuitDialog() {
+                    if (quitDialog) {
+                        quitDialog.style.display = 'none';
+                    }
+                }
+
+                // Listen for IPC message to show quit dialog
+                if (window.electronAPI && window.electronAPI.onShowQuitDialog) {
+                    window.electronAPI.onShowQuitDialog(() => {
+                        showQuitDialog();
+                    });
+                }
+
+                // Handle button clicks
+                if (quitCancelBtn) {
+                    quitCancelBtn.addEventListener('click', () => {
+                        hideQuitDialog();
+                        if (window.electronAPI && window.electronAPI.cancelQuit) {
+                            window.electronAPI.cancelQuit();
+                        }
+                    });
+                }
+
+                if (quitConfirmBtn) {
+                    quitConfirmBtn.addEventListener('click', () => {
+                        hideQuitDialog();
+                        if (window.electronAPI && window.electronAPI.confirmQuit) {
+                            window.electronAPI.confirmQuit();
+                        }
+                    });
+                }
+
+                // Close dialog on overlay click
+                if (quitDialog) {
+                    quitDialog.addEventListener('click', (e) => {
+                        if (e.target === quitDialog) {
+                            hideQuitDialog();
+                            if (window.electronAPI && window.electronAPI.cancelQuit) {
+                                window.electronAPI.cancelQuit();
+                            }
+                        }
+                    });
+                }
+
+                // Handle Escape key to close dialog and Enter key to confirm
+                document.addEventListener('keydown', (e) => {
+                    if (quitDialog && quitDialog.style.display === 'flex') {
+                        if (e.key === 'Escape') {
+                            hideQuitDialog();
+                            if (window.electronAPI && window.electronAPI.cancelQuit) {
+                                window.electronAPI.cancelQuit();
+                            }
+                        } else if (e.key === 'Enter') {
+                            hideQuitDialog();
+                            if (window.electronAPI && window.electronAPI.confirmQuit) {
+                                window.electronAPI.confirmQuit();
+                            }
+                        }
+                    }
+                });
             } catch (error) {
                 console.error('Error initializing BrowserManager:', error);
             }
         });
     </script>
+
+    <!-- Quit Confirmation Dialog -->
+    <div id="quitDialog" class="quit-dialog-overlay" style="display: none;">
+        <div class="quit-dialog">
+            <div class="quit-dialog-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </div>
+            <h2 class="quit-dialog-title">Are you sure you want to quit?</h2>
+            <p class="quit-dialog-message">All unsaved changes will be lost.</p>
+            <div class="quit-dialog-buttons">
+                <button id="quitCancelBtn" class="quit-dialog-btn quit-dialog-btn-cancel">Cancel</button>
+                <button id="quitConfirmBtn" class="quit-dialog-btn quit-dialog-btn-quit">Quit</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -1,7 +1,7 @@
 // Load environment variables
 require('dotenv').config();
 
-const { app, BrowserWindow, ipcMain, Menu, clipboard, globalShortcut, session } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, clipboard, globalShortcut, session, dialog } = require('electron');
 const path = require('node:path');
 const { initialize, enable } = require('@electron/remote/main');
 const { streamChat } = require('./openaiHelper');
@@ -19,6 +19,43 @@ if (require('electron-squirrel-startup')) {
 console.log('App initialization starting...');
 
 let mainWindow;
+let quitConfirmed = false;
+let isTerminalSignal = false;
+let externalQuitRequested = false;
+
+const handleExternalExitSignal = (source) => {
+  console.log(`${source} received in main process, exiting without confirmation`);
+  isTerminalSignal = true;
+  quitConfirmed = true;
+  // Use exit() instead of quit() to bypass before-quit event
+  app.exit(0);
+};
+
+const promptQuit = (targetWindow) => {
+  if (isTerminalSignal) {
+    return;
+  }
+  externalQuitRequested = false;
+  const windowToPrompt = targetWindow || BrowserWindow.getFocusedWindow() || mainWindow || BrowserWindow.getAllWindows()[0];
+  if (windowToPrompt) {
+    windowToPrompt.webContents.send('show-quit-dialog');
+  } else {
+    // No window available, fall back to quitting directly
+    quitConfirmed = true;
+    app.quit();
+  }
+};
+
+// Handle terminal signals (Ctrl+C, SIGTERM) - quit immediately without confirmation
+process.on('SIGINT', () => handleExternalExitSignal('SIGINT'));
+process.on('SIGTERM', () => handleExternalExitSignal('SIGTERM'));
+
+// Electron Forge dev environment may send a graceful-exit message
+process.on('message', (msg) => {
+  if (msg === 'graceful-exit') {
+    handleExternalExitSignal('graceful-exit message');
+  }
+});
 
 // Configure cookie persistence for the browser session
 const configureSessionCookies = async () => {
@@ -206,10 +243,31 @@ const createWindow = (isIncognito = false) => {
     }
   });
 
+  newWindow.on('close', (event) => {
+    if (quitConfirmed || isTerminalSignal || externalQuitRequested) {
+      return;
+    }
+
+    // Only prompt when closing the last regular window (treat closing the app)
+    const allWindows = BrowserWindow.getAllWindows();
+    const isLastWindow = allWindows.length === 1;
+    const shouldPrompt = isLastWindow && !newWindow.isIncognito;
+
+    if (shouldPrompt) {
+      event.preventDefault();
+      promptQuit(newWindow);
+    }
+  });
+
   // Set mainWindow if this is the first window
   if (!mainWindow && !isIncognito) {
     mainWindow = newWindow;
   }
+
+  // Reset quit confirmation flag when window is shown
+  newWindow.once('ready-to-show', () => {
+    quitConfirmed = false;
+  });
 
   return newWindow;
 };
@@ -482,7 +540,8 @@ const createMenu = () => {
           label: 'Quit',
           accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
           click: () => {
-            app.quit();
+            // The quit dialog handles confirmation
+            promptQuit();
           }
         }
       ]
@@ -762,6 +821,22 @@ app.whenReady().then(async () => {
   });
 });
 
+// IPC handlers for quit confirmation
+ipcMain.on('quit-confirm', () => {
+  quitConfirmed = true;
+  app.quit();
+});
+
+ipcMain.on('quit-cancel', () => {
+  quitConfirmed = false;
+});
+
+app.on('before-quit', () => {
+  if (!quitConfirmed) {
+    externalQuitRequested = true;
+  }
+});
+
 // Quit when all windows are closed, except on macOS.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -774,4 +849,8 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   // Save ad blocker stats before quitting
   adBlocker.saveStats();
+  // Reset flags for next session
+  quitConfirmed = false;
+  isTerminalSignal = false;
+  externalQuitRequested = false;
 });
