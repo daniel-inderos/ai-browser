@@ -146,24 +146,6 @@ npm run make
 - **Build Tool**: Electron Forge
 - **Markdown**: Marked.js for chat rendering
 
-### Project Structure
-```
-ai-browser/
-├── src/
-│   ├── index.js              # Main Electron process (app logic, IPC)
-│   ├── index.html            # Main browser UI with tab rail and chat
-│   ├── index.css             # Comprehensive design system and styling
-│   ├── preload.js            # IPC bridge for secure renderer communication
-│   ├── openaiHelper.js       # OpenAI API integration with streaming
-│   ├── storageHelper.js      # JSON-based persistent storage manager
-│   ├── adBlocker.js          # Ad blocking logic and statistics
-│   ├── newtab.html           # New tab page with Search/Ask modes
-│   ├── settings.html         # Settings page with ad blocker controls
-│   └── history.html          # Browsing history and chat archives
-├── forge.config.js           # Electron Forge build configuration
-└── package.json              # Dependencies and scripts
-```
-
 ### Architecture
 
 #### Main Process (index.js)
@@ -241,11 +223,7 @@ The app uses a comprehensive design system with:
 
 ## Contributing
 
-This is a personal project. Feel free to fork and modify for your own use.
-
-## License
-
-MIT License - See LICENSE file for details
+Feel free to open a PR!
 
 ## Acknowledgments
 
