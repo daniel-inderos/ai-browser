@@ -978,6 +978,12 @@
                     this.createTab(url);
                 });
 
+                // Tab context menu event listeners
+                window.electronAPI.onTabMuted(({ tabId }) => this.handleTabMuted(tabId));
+                window.electronAPI.onDuplicateTab(({ tabId }) => this.handleDuplicateTab(tabId));
+                window.electronAPI.onPinTab(({ tabId }) => this.handlePinTab(tabId));
+                window.electronAPI.onCloseTabById(({ tabId }) => this.closeTab(tabId));
+
                 // Window resize handling
                 window.addEventListener('resize', this.debounce(() => {
                     this.updateLayout();
@@ -1079,7 +1085,7 @@
                 this.urlBarContainer.style.display = 'flex';
             }
 
-            async createTab(url = 'https://www.google.com', restoredId = null, restoredTitle = null) {
+            async createTab(url = 'https://www.google.com', restoredId = null, restoredTitle = null, restoredState = null) {
                 const preloadPath = await window.electronAPI.getPreloadPath();
                 console.log('createTab called with url:', url);
                 // Use restored ID if provided, otherwise generate new one
@@ -1104,6 +1110,8 @@
                     railElement: null,
                     railTitle: null,
                     railFavicon: null,
+                    isMuted: restoredState?.isMuted || false, // Track mute state
+                    isPinned: restoredState?.isPinned || false, // Track pin state
                 };
 
                 // Create enhanced tab UI with better accessibility
@@ -1256,6 +1264,12 @@
                             e.preventDefault();
                             this.switchToTab(tabId);
                         }
+                    });
+
+                    // Add context menu event listener
+                    railElement.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        window.electronAPI.showTabContextMenu(tabId, e.clientX, e.clientY, tab.isMuted, tab.isPinned);
                     });
 
                     this.tabRailTabs.appendChild(railElement);
@@ -1558,6 +1572,19 @@
                     this.chatSessions.set(tabId, []);
                 }
 
+                // Apply restored states
+                if (tab.isMuted && webview) {
+                    // Apply mute state when webview is ready
+                    webview.addEventListener('dom-ready', () => {
+                        webview.setAudioMuted(true);
+                    }, { once: true });
+                }
+
+                // Update visual indicators for restored states
+                if (tab.isMuted || tab.isPinned) {
+                    this.updateTabVisuals(tab);
+                }
+
                 // When the webview is ready, perform the full switch if it's the active tab.
                 // This prevents race conditions where we try to execute JS before the page is loaded.
                 webview.addEventListener('dom-ready', () => {
@@ -1569,6 +1596,9 @@
                 // Always focus the newly created tab (unless restoring - in that case switchToTab will be called after all tabs are restored)
                 if (!restoredId) {
                     this.switchToTab(tabId);
+                } else if (tab.isPinned) {
+                    // If restoring and tab is pinned, reorder tabs after all tabs are loaded
+                    setTimeout(() => this.reorderTabs(), 100);
                 }
 
                 // Save tabs after creation (debounced)
@@ -1599,7 +1629,9 @@
                     const tabsData = this.tabs.map(tab => ({
                         id: tab.id,
                         url: tab.url,
-                        title: tab.title || 'New Tab'
+                        title: tab.title || 'New Tab',
+                        isMuted: tab.isMuted || false,
+                        isPinned: tab.isPinned || false
                     }));
                     await window.electronAPI.saveTabs(tabsData, this.activeTabId);
                 } catch (error) {
@@ -2064,7 +2096,11 @@
                         console.log('Restoring saved tabs:', savedTabsData.tabs.length);
                         // Restore each saved tab
                         for (const savedTab of savedTabsData.tabs) {
-                            await this.createTab(savedTab.url, savedTab.id, savedTab.title);
+                            const restoredState = {
+                                isMuted: savedTab.isMuted || false,
+                                isPinned: savedTab.isPinned || false
+                            };
+                            await this.createTab(savedTab.url, savedTab.id, savedTab.title, restoredState);
                         }
                         // Switch to the previously active tab if it still exists
                         if (savedTabsData.activeTabId) {
@@ -2177,6 +2213,109 @@
                 if (this.activeTabId) {
                     this.closeTab(this.activeTabId);
                 }
+            }
+
+            handleTabMuted(tabId) {
+                const tab = this.tabs.find(t => t.id === tabId);
+                if (!tab) return;
+
+                // Toggle mute state
+                tab.isMuted = !tab.isMuted;
+
+                // Update webview audio state
+                if (tab.webview) {
+                    tab.webview.setAudioMuted(tab.isMuted);
+                }
+
+                // Update visual indicator
+                this.updateTabVisuals(tab);
+
+                // Save tabs state (debounced)
+                this.saveTabsDebounced();
+
+                // Show toast notification
+                const message = tab.isMuted ? 'Tab muted' : 'Tab unmuted';
+                this.showToast(message);
+            }
+
+            handleDuplicateTab(tabId) {
+                const tab = this.tabs.find(t => t.id === tabId);
+                if (!tab) return;
+
+                // Create new tab with same URL
+                this.createTab(tab.url);
+
+                // Show toast notification
+                this.showToast('Tab duplicated');
+            }
+
+            handlePinTab(tabId) {
+                const tab = this.tabs.find(t => t.id === tabId);
+                if (!tab) return;
+
+                // Toggle pin state
+                tab.isPinned = !tab.isPinned;
+
+                // Update visual indicator
+                this.updateTabVisuals(tab);
+
+                // Reorder tabs: pinned tabs should be at the top
+                this.reorderTabs();
+
+                // Save tabs state (debounced)
+                this.saveTabsDebounced();
+
+                // Show toast notification
+                const message = tab.isPinned ? 'Tab pinned' : 'Tab unpinned';
+                this.showToast(message);
+            }
+
+            updateTabVisuals(tab) {
+                if (!tab.railElement) return;
+
+                // Update muted state
+                if (tab.isMuted) {
+                    tab.railElement.classList.add('muted');
+
+                    // Add muted icon if not already present
+                    if (!tab.railElement.querySelector('.muted-icon')) {
+                        const mutedIcon = document.createElement('span');
+                        mutedIcon.className = 'muted-icon';
+                        mutedIcon.innerHTML = '🔇';
+                        mutedIcon.setAttribute('title', 'Tab is muted');
+                        tab.railElement.insertBefore(mutedIcon, tab.railElement.querySelector('.rail-close-btn'));
+                    }
+                } else {
+                    tab.railElement.classList.remove('muted');
+                    const mutedIcon = tab.railElement.querySelector('.muted-icon');
+                    if (mutedIcon) mutedIcon.remove();
+                }
+
+                // Update pinned state
+                if (tab.isPinned) {
+                    tab.railElement.classList.add('pinned');
+                } else {
+                    tab.railElement.classList.remove('pinned');
+                }
+            }
+
+            reorderTabs() {
+                // Separate pinned and unpinned tabs
+                const pinnedTabs = this.tabs.filter(t => t.isPinned);
+                const unpinnedTabs = this.tabs.filter(t => !t.isPinned);
+
+                // Clear the rail container
+                this.tabRailTabs.innerHTML = '';
+
+                // Add pinned tabs first, then unpinned tabs
+                [...pinnedTabs, ...unpinnedTabs].forEach(tab => {
+                    if (tab.railElement) {
+                        this.tabRailTabs.appendChild(tab.railElement);
+                    }
+                });
+
+                // Update the tabs array to reflect the new order
+                this.tabs = [...pinnedTabs, ...unpinnedTabs];
             }
 
             async navigateToUrl() {

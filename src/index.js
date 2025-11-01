@@ -517,6 +517,47 @@ ipcMain.handle('ad-blocker-stats', async (event) => {
   return adBlocker.getAdBlockerStats();
 });
 
+// Tab context menu IPC handler
+ipcMain.on('tab-context-menu', (event, { tabId, x, y, isMuted, isPinned }) => {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  if (!focusedWindow) return;
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: isMuted ? 'Unmute Tab' : 'Mute Tab',
+      click: () => {
+        focusedWindow.webContents.send('tab-muted', { tabId });
+      }
+    },
+    {
+      label: 'Duplicate Tab',
+      click: () => {
+        focusedWindow.webContents.send('duplicate-tab', { tabId });
+      }
+    },
+    {
+      label: isPinned ? 'Unpin Tab' : 'Pin Tab',
+      click: () => {
+        focusedWindow.webContents.send('pin-tab', { tabId });
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Close Tab',
+      click: () => {
+        focusedWindow.webContents.send('close-tab-by-id', { tabId });
+      }
+    }
+  ]);
+
+  // Show context menu at cursor position
+  contextMenu.popup({
+    window: focusedWindow,
+    x: Math.round(x),
+    y: Math.round(y)
+  });
+});
+
 
 // Create application menu
 const createMenu = () => {

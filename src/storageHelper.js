@@ -171,7 +171,9 @@ function saveTabs(tabs, activeTabId) {
     const tabsData = tabs.map(tab => ({
       id: tab.id,
       url: tab.url,
-      title: tab.title || 'New Tab'
+      title: tab.title || 'New Tab',
+      isMuted: tab.isMuted || false,
+      isPinned: tab.isPinned || false
     }));
     const data = {
       tabs: tabsData,

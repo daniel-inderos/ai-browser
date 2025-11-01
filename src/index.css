@@ -484,6 +484,38 @@ textarea:focus {
     color: var(--color-text-inverse);
 }
 
+/* Muted tab styling */
+.rail-tab.muted {
+    opacity: 0.6;
+    filter: grayscale(50%);
+}
+
+.rail-tab.muted:hover {
+    opacity: 0.8;
+}
+
+.muted-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    margin-right: var(--spacing-1);
+    flex-shrink: 0;
+}
+
+/* Pinned tab styling */
+.rail-tab.pinned {
+    border-top: 3px solid var(--color-primary);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), var(--color-surface));
+}
+
+@media (prefers-color-scheme: dark) {
+    .rail-tab.pinned {
+        border-top: 3px solid var(--color-primary);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), var(--color-surface-elevated));
+    }
+}
+
 /* Shift top bars and content to the right of the rail */
 .tab-bar { display: none; height: 0; padding: 0; border: none; }
 

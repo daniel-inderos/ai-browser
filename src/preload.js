@@ -76,5 +76,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Quit confirmation
   onShowQuitDialog: (callback) => ipcRenderer.on('show-quit-dialog', callback),
   confirmQuit: () => ipcRenderer.send('quit-confirm'),
-  cancelQuit: () => ipcRenderer.send('quit-cancel')
+  cancelQuit: () => ipcRenderer.send('quit-cancel'),
+
+  // Tab context menu
+  showTabContextMenu: (tabId, x, y, isMuted, isPinned) => ipcRenderer.send('tab-context-menu', { tabId, x, y, isMuted, isPinned }),
+  onTabMuted: (callback) => ipcRenderer.on('tab-muted', (_e, data) => callback(data)),
+  onDuplicateTab: (callback) => ipcRenderer.on('duplicate-tab', (_e, data) => callback(data)),
+  onPinTab: (callback) => ipcRenderer.on('pin-tab', (_e, data) => callback(data)),
+  onCloseTabById: (callback) => ipcRenderer.on('close-tab-by-id', (_e, data) => callback(data))
 });
