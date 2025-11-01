@@ -544,6 +544,7 @@ ipcMain.on('tab-context-menu', (event, { tabId, x, y, isMuted, isPinned }) => {
     { type: 'separator' },
     {
       label: 'Close Tab',
+      enabled: !isPinned,
       click: () => {
         focusedWindow.webContents.send('close-tab-by-id', { tabId });
       }
