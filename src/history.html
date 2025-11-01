@@ -399,9 +399,11 @@
                     `;
 
                     itemEl.addEventListener('click', (e) => {
-                        if (!e.target.classList.contains('history-delete-btn')) {
-                            // Could show chat details in a modal or navigate to chat
-                            console.log('Chat clicked:', chat);
+                        if (e.target.classList.contains('history-delete-btn')) {
+                            return;
+                        }
+                        if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+                            window.electronAPI.sendToHost('open-chat-session', { chatId: chat.id });
                         }
                     });
 
@@ -471,4 +473,3 @@
     </script>
 </body>
 </html>
-
