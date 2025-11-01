@@ -175,14 +175,14 @@
                     </button>
                 </div>
                 <div class="command-palette-input-wrapper">
-                    <input 
-                        type="text" 
+                    <textarea 
                         class="command-palette-input" 
                         id="commandPaletteInput" 
                         placeholder="Search or Enter URL..."
                         autocomplete="off"
                         spellcheck="false"
-                    />
+                        rows="1"
+                    ></textarea>
                     <div class="command-palette-autocomplete" id="commandPaletteAutocomplete"></div>
                 </div>
             </div>
@@ -374,6 +374,7 @@
                 this.incognitoIndicator = document.getElementById('incognitoIndicator');
                 // Command palette elements
                 this.commandPaletteBackdrop = document.getElementById('commandPaletteBackdrop');
+                this.commandPalette = document.querySelector('.command-palette');
                 this.commandPaletteInput = document.getElementById('commandPaletteInput');
                 this.commandPaletteAutocomplete = document.getElementById('commandPaletteAutocomplete');
                 this.commandPaletteResults = document.getElementById('commandPaletteResults');
@@ -844,6 +845,7 @@
                 });
                 
                 this.commandPaletteInput.addEventListener('input', () => {
+                    this.adjustCommandPaletteInputHeight();
                     // Reset selection when user types (but not when navigating with arrow keys)
                     if (!this.isNavigatingResults) {
                         this.selectedResultIndex = -1;
@@ -1674,6 +1676,7 @@
                 this.selectedResultIndex = -1;
                 this.commandPaletteBackdrop.classList.add('active');
                 this.updateCommandPaletteResults();
+                this.adjustCommandPaletteInputHeight();
                 // Use setTimeout to ensure the backdrop is visible before focusing
                 setTimeout(() => {
                     this.commandPaletteInput.focus();
@@ -1686,6 +1689,9 @@
                 this.selectedResultIndex = -1;
                 this.commandPaletteResults.innerHTML = '';
                 this.hideAutocomplete();
+                if (this.commandPaletteInput) {
+                    this.commandPaletteInput.style.height = '';
+                }
             }
 
             setCommandPaletteMode(mode) {
@@ -1694,15 +1700,39 @@
                 if (mode === 'search') {
                     this.commandPaletteModeSearch.classList.add('active');
                     this.commandPaletteModeAsk.classList.remove('active');
+                    if (this.commandPalette) {
+                        this.commandPalette.classList.remove('command-palette--ask-mode');
+                    }
                     this.commandPaletteInput.placeholder = 'Search or Enter URL...';
                 } else {
                     this.commandPaletteModeSearch.classList.remove('active');
                     this.commandPaletteModeAsk.classList.add('active');
+                    if (this.commandPalette) {
+                        this.commandPalette.classList.add('command-palette--ask-mode');
+                    }
                     this.commandPaletteInput.placeholder = 'Ask a question...';
                 }
                 
+                this.adjustCommandPaletteInputHeight();
+                
                 this.updateCommandPaletteResults();
                 this.commandPaletteInput.focus();
+            }
+
+            adjustCommandPaletteInputHeight() {
+                if (!this.commandPaletteInput) {
+                    return;
+                }
+                
+                if (this.commandPaletteMode === 'ask') {
+                    this.commandPaletteInput.style.height = 'auto';
+                    const computed = window.getComputedStyle(this.commandPaletteInput);
+                    const minHeight = parseFloat(computed.minHeight) || 0;
+                    const targetHeight = Math.max(this.commandPaletteInput.scrollHeight, minHeight);
+                    this.commandPaletteInput.style.height = `${targetHeight}px`;
+                } else {
+                    this.commandPaletteInput.style.height = '';
+                }
             }
 
             // Helper function to get favicon URL for a given URL
@@ -1747,6 +1777,17 @@
 
             updateCommandPaletteResults() {
                 const query = this.commandPaletteInput.value.trim().toLowerCase();
+                
+                if (this.commandPaletteMode === 'ask') {
+                    this.currentResults = [];
+                    this.selectedResultIndex = -1;
+                    this.hideAutocomplete();
+                    if (this.commandPaletteResults) {
+                        this.commandPaletteResults.innerHTML = '';
+                    }
+                    return;
+                }
+                
                 const results = [];
                 
                 // Add open tabs

@@ -1462,6 +1462,7 @@ webview {
     display: flex;
     align-items: center;
     gap: var(--spacing-2);
+    transition: padding var(--transition-normal);
 }
 
 .command-palette-mode-switcher {
@@ -1523,6 +1524,10 @@ webview {
     font-weight: var(--font-weight-normal);
     position: relative;
     z-index: 2;
+    resize: none;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: padding var(--transition-normal), min-height var(--transition-normal), font-size var(--transition-normal), height var(--transition-normal);
 }
 
 .command-palette-autocomplete {
@@ -1544,10 +1549,39 @@ webview {
     z-index: 1;
     box-sizing: border-box;
     display: none;
+    transition: padding var(--transition-normal);
 }
 
 .command-palette-input::placeholder {
     color: var(--color-text-tertiary);
+}
+
+.command-palette--ask-mode .command-palette-input-container {
+    padding: var(--spacing-5);
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--spacing-4);
+}
+
+.command-palette--ask-mode .command-palette-mode-switcher {
+    margin-top: 0;
+    align-self: flex-start;
+}
+
+.command-palette--ask-mode .command-palette-input-wrapper {
+    width: 100%;
+}
+
+.command-palette--ask-mode .command-palette-input {
+    padding: var(--spacing-3) var(--spacing-4);
+    min-height: 96px;
+    font-size: 1.1rem;
+    white-space: normal;
+}
+
+.command-palette--ask-mode .command-palette-results {
+    display: none;
 }
 
 .command-palette-results {
