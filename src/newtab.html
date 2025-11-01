@@ -230,17 +230,27 @@
                 this.mode = 'search';
                 this.askManager = null;
                 this.autoSendQuery = null;
+                this.pendingChatId = null;
                 this.setupEventListeners();
                 
                 // Check if we should open in Ask mode based on URL parameter
                 const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('mode') === 'ask') {
-                    // Hide mode toggle when in Ask mode
-                    document.getElementById('modeToggle').style.display = 'none';
-                    
-                    // Store query for auto-send after initialization
-                    this.autoSendQuery = urlParams.get('query');
-                    
+                const chatIdParam = urlParams.get('chatId');
+                const forceAskMode = urlParams.get('mode') === 'ask' || !!chatIdParam;
+
+                if (chatIdParam) {
+                    this.pendingChatId = chatIdParam;
+                }
+
+                if (forceAskMode) {
+                    const modeToggle = document.getElementById('modeToggle');
+                    if (modeToggle) {
+                        modeToggle.style.display = 'none';
+                    }
+                    // Only apply auto-send when no saved chat is being restored
+                    if (!this.pendingChatId) {
+                        this.autoSendQuery = urlParams.get('query');
+                    }
                     this.switchMode('ask');
                 }
             }
@@ -291,7 +301,7 @@
             }
 
             switchMode(newMode) {
-                if (this.mode === newMode) return;
+                if (this.mode === newMode && !(newMode === 'ask' && this.pendingChatId)) return;
                 this.mode = newMode;
 
                 const isSearch = newMode === 'search';
@@ -305,8 +315,14 @@
                     this.elements.searchInput.focus();
                 } else {
                     if (!this.askManager) {
-                        this.askManager = new AskManager(this.autoSendQuery);
+                        this.askManager = new AskManager({
+                            autoSendQuery: this.autoSendQuery,
+                            preloadChatId: this.pendingChatId
+                        });
+                    } else if (this.pendingChatId) {
+                        this.askManager.restoreChatFromId(this.pendingChatId);
                     }
+                    this.pendingChatId = null;
                     // Expand to full-page Ask with a smooth animation
                     // Use rAF to ensure class toggle animates cleanly
                     requestAnimationFrame(() => document.body.classList.add('is-ask-expanded'));
@@ -328,7 +344,7 @@
         }
 
         class AskManager {
-            constructor(autoSendQuery = null) {
+            constructor({ autoSendQuery = null, preloadChatId = null } = {}) {
                 this.elements = {
                     chatHistory: document.getElementById('chatHistory'),
                     contextPillsContainer: document.getElementById('contextPillsContainer'),
@@ -358,6 +374,10 @@
                         this.handleChatSend();
                     }, 200);
                 }
+
+                if (preloadChatId) {
+                    this.restoreChatFromId(preloadChatId);
+                }
             }
 
             setupEventListeners() {
@@ -386,6 +406,9 @@
                         break;
                     case 'chat-stream-response':
                         this.handleStreamResponse(data);
+                        break;
+                    case 'load-chat-session':
+                        this.loadSavedSession(data);
                         break;
                 }
             }
@@ -558,6 +581,69 @@
                 this.updatePlaceholder();
                 // Generate new session ID for next chat
                 this.sessionId = 'newtab-' + Date.now();
+            }
+
+            loadSavedSession(data) {
+                if (!data || !Array.isArray(data.session)) {
+                    return;
+                }
+
+                // Reset current stream state
+                this.currentStream = null;
+                this.toggleStreamingUI(false);
+
+                this.sessionId = data.chatId || this.sessionId || 'newtab-' + Date.now();
+                this.session = data.session.map((msg) => ({ ...msg }));
+                this.referencedTabs.clear();
+                this.renderContextPills();
+                this.renderChatHistory();
+                this.updatePlaceholder();
+
+                if (this.elements.chatHistory) {
+                    this.elements.chatHistory.scrollTop = this.elements.chatHistory.scrollHeight;
+                }
+
+                if (typeof data.title === 'string' && data.title.trim().length > 0) {
+                    const safeTitle = data.title.trim();
+                    document.title = safeTitle;
+                    if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+                        window.electronAPI.sendToHost('update-title', { title: safeTitle });
+                    }
+                }
+
+                if (this.elements.chatInput) {
+                    this.elements.chatInput.value = '';
+                    this.autoResizeEditor();
+                    this.elements.chatSendBtn.disabled = true;
+                    this.elements.chatInput.focus();
+                }
+            }
+
+            async restoreChatFromId(chatId) {
+                if (!chatId) {
+                    return;
+                }
+                if (!window.electronAPI || typeof window.electronAPI.loadChats !== 'function') {
+                    console.warn('electronAPI.loadChats unavailable; cannot restore chat.');
+                    return;
+                }
+                try {
+                    const chats = await window.electronAPI.loadChats();
+                    const chatData = chats ? chats[chatId] : null;
+                    if (!chatData || !Array.isArray(chatData.session)) {
+                        console.warn('Saved chat not found for chatId:', chatId);
+                        return;
+                    }
+                    const firstUserMessage = chatData.session.find((msg) => msg.role === 'user');
+                    const fallbackTitle = firstUserMessage ? firstUserMessage.content.substring(0, 50) : 'AI Chat Session';
+                    this.loadSavedSession({
+                        chatId: chatData.id || chatId,
+                        title: chatData.title || fallbackTitle,
+                        session: chatData.session.map((msg) => ({ ...msg }))
+                    });
+                } catch (error) {
+                    console.error('Error restoring chat session:', error);
+                }
             }
 
             async saveChatSession() {

@@ -227,9 +227,12 @@
                 }
                 
                 // Initialize partition and incognito mode before creating initial tab
-                this.initializePartition().then(() => {
-                    this.createInitialTab();
-                });
+                this.initializePartition()
+                    .then(() => this.loadPersistedChats())
+                    .then(() => this.createInitialTab())
+                    .catch((error) => {
+                        console.error('Error during startup initialization:', error);
+                    });
                 
                 // Load history for command palette suggestions
                 this.loadHistory();
@@ -247,6 +250,34 @@
                     console.error('Error initializing partition:', error);
                     // Fallback to default partition
                     this.partition = 'persist:browser';
+                }
+            }
+
+            async loadPersistedChats() {
+                if (!window.electronAPI || typeof window.electronAPI.loadChats !== 'function') {
+                    return;
+                }
+
+                // Skip loading chats when running in incognito mode
+                if (this.isIncognito) {
+                    this.chatSessions.clear();
+                    return;
+                }
+
+                try {
+                    const storedChats = await window.electronAPI.loadChats();
+                    if (storedChats && typeof storedChats === 'object') {
+                        Object.entries(storedChats).forEach(([chatId, chatData]) => {
+                            if (chatData && Array.isArray(chatData.session)) {
+                                const restoredSession = chatData.session.map((msg) => ({
+                                    ...msg
+                                }));
+                                this.chatSessions.set(chatId, restoredSession);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading saved chats:', error);
                 }
             }
             
@@ -1412,6 +1443,9 @@
                                 this.createTab(arg.url);
                             }
                         }
+                        if (channel === 'open-chat-session') {
+                            this.openSavedChat(arg.chatId);
+                        }
                         if (channel === 'update-title') {
                             // Update tab title and URL bar when newtab sends title update
                             const newTitle = arg.title || 'New Tab';
@@ -1458,12 +1492,12 @@
                                 case 'refresh-page':
                                     this.refreshPage();
                                     break;
-                                case 'toggle-chat':
-                                    this.toggleChatSidebar();
-                                    break;
-                                default:
-                                    break;
-                            }
+                        case 'toggle-chat':
+                            this.toggleChatSidebar();
+                            break;
+                        default:
+                            break;
+                        }
                         }
                     } catch (e) {
                         console.error('ipc-message handler error:', e);
@@ -2817,6 +2851,52 @@
                         this.updateChatContextUI(activeTab);
                     });
                 });
+            }
+
+            async openSavedChat(chatId) {
+                if (!chatId) {
+                    return;
+                }
+                try {
+                    if (!window.electronAPI || typeof window.electronAPI.loadChats !== 'function') {
+                        console.warn('electronAPI.loadChats is not available');
+                        return;
+                    }
+
+                    const chats = await window.electronAPI.loadChats();
+                    const chatEntry = chats ? chats[chatId] : null;
+                    if (!chatEntry || !Array.isArray(chatEntry.session)) {
+                        this.showToast('Chat not found');
+                        return;
+                    }
+
+                    const restoredTitle = chatEntry.title || 'AI Chat Session';
+                    const chatUrl = `newtab.html?mode=ask&chatId=${encodeURIComponent(chatEntry.id)}`;
+                    const newTab = await this.createTab(chatUrl, null, restoredTitle);
+                    if (!newTab || !newTab.webview) {
+                        this.showToast('Unable to open chat');
+                        return;
+                    }
+
+	                    const sessionClone = chatEntry.session.map((msg) => ({ ...msg }));
+	                    this.chatSessions.set(newTab.id, sessionClone);
+
+	                    const payload = {
+	                        type: 'load-chat-session',
+	                        chatId: chatEntry.id,
+	                        title: chatEntry.title || restoredTitle,
+	                        session: sessionClone
+	                    };
+                    // Send payload in case the newly opened tab can consume it directly (fallback for legacy flows)
+                    try {
+                        newTab.webview.send('guest-message', payload);
+                    } catch (error) {
+                        console.warn('Deferred chat payload delivery failed; relying on in-tab restoration.', error);
+                    }
+                } catch (error) {
+                    console.error('Error opening saved chat:', error);
+                    this.showToast('Unable to open chat');
+                }
             }
 
             async showHistory() {
