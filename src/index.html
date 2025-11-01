@@ -1110,6 +1110,8 @@
                     railElement: null,
                     railTitle: null,
                     railFavicon: null,
+                    tabCloseBtn: null,
+                    railCloseBtn: null,
                     isMuted: restoredState?.isMuted || false, // Track mute state
                     isPinned: restoredState?.isPinned || false, // Track pin state
                 };
@@ -1202,6 +1204,7 @@
                     e.stopPropagation();
                     this.closeTab(tabId);
                 });
+                tab.tabCloseBtn = closeBtn;
 
                 tabElement.appendChild(tabTitle);
                 tabElement.appendChild(tabFavicon);
@@ -1253,6 +1256,7 @@
                         e.stopPropagation();
                         this.closeTab(tabId);
                     });
+                    tab.railCloseBtn = railCloseBtn;
 
                     railElement.appendChild(railFavicon);
                     railElement.appendChild(railTitle);
@@ -2185,6 +2189,16 @@
                 if (tabIndex === -1) return;
 
                 const tab = this.tabs[tabIndex];
+                if (tab.isPinned) {
+                    if (this.activeTabId === tabId) {
+                        const nextTab = this.findNextTabToActivate(tabId);
+                        if (nextTab) {
+                            this.switchToTab(nextTab.id);
+                        }
+                    }
+                    this.showToast('Pinned tabs stay open. Unpin to close.');
+                    return;
+                }
                 
                 // Remove from DOM
                 tab.tabElement.remove();
@@ -2213,6 +2227,22 @@
                 if (this.activeTabId) {
                     this.closeTab(this.activeTabId);
                 }
+            }
+
+            findNextTabToActivate(currentTabId) {
+                if (this.tabs.length <= 1) {
+                    return null;
+                }
+
+                const currentIndex = this.tabs.findIndex(t => t.id === currentTabId);
+                const orderedTabs = currentIndex === -1
+                    ? [...this.tabs]
+                    : [
+                        ...this.tabs.slice(currentIndex + 1),
+                        ...this.tabs.slice(0, currentIndex)
+                    ];
+
+                return orderedTabs.find(t => !t.isPinned) || orderedTabs.find(t => t.id !== currentTabId) || null;
             }
 
             handleTabMuted(tabId) {
@@ -2271,32 +2301,49 @@
             }
 
             updateTabVisuals(tab) {
-                if (!tab.railElement) return;
+                if (tab.railElement) {
+                    // Update muted state
+                    if (tab.isMuted) {
+                        tab.railElement.classList.add('muted');
 
-                // Update muted state
-                if (tab.isMuted) {
-                    tab.railElement.classList.add('muted');
-
-                    // Add muted icon if not already present
-                    if (!tab.railElement.querySelector('.muted-icon')) {
-                        const mutedIcon = document.createElement('span');
-                        mutedIcon.className = 'muted-icon';
-                        mutedIcon.innerHTML = '🔇';
-                        mutedIcon.setAttribute('title', 'Tab is muted');
-                        tab.railElement.insertBefore(mutedIcon, tab.railElement.querySelector('.rail-close-btn'));
+                        // Add muted icon if not already present
+                        if (!tab.railElement.querySelector('.muted-icon')) {
+                            const mutedIcon = document.createElement('span');
+                            mutedIcon.className = 'muted-icon';
+                            mutedIcon.innerHTML = '🔇';
+                            mutedIcon.setAttribute('title', 'Tab is muted');
+                            tab.railElement.insertBefore(mutedIcon, tab.railElement.querySelector('.rail-close-btn'));
+                        }
+                    } else {
+                        tab.railElement.classList.remove('muted');
+                        const mutedIcon = tab.railElement.querySelector('.muted-icon');
+                        if (mutedIcon) mutedIcon.remove();
                     }
-                } else {
-                    tab.railElement.classList.remove('muted');
-                    const mutedIcon = tab.railElement.querySelector('.muted-icon');
-                    if (mutedIcon) mutedIcon.remove();
+
+                    tab.railElement.classList.toggle('pinned', tab.isPinned);
                 }
 
-                // Update pinned state
-                if (tab.isPinned) {
-                    tab.railElement.classList.add('pinned');
-                } else {
-                    tab.railElement.classList.remove('pinned');
+                if (tab.tabElement) {
+                    tab.tabElement.classList.toggle('pinned', tab.isPinned);
                 }
+
+                const updateCloseButton = (button) => {
+                    if (!button) return;
+                    if (tab.isPinned) {
+                        button.disabled = true;
+                        button.setAttribute('disabled', '');
+                        button.setAttribute('aria-hidden', 'true');
+                        button.setAttribute('tabindex', '-1');
+                    } else {
+                        button.disabled = false;
+                        button.removeAttribute('disabled');
+                        button.removeAttribute('aria-hidden');
+                        button.removeAttribute('tabindex');
+                    }
+                };
+
+                updateCloseButton(tab.tabCloseBtn);
+                updateCloseButton(tab.railCloseBtn);
             }
 
             reorderTabs() {

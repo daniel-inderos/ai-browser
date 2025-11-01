@@ -509,6 +509,14 @@ textarea:focus {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), var(--color-surface));
 }
 
+.rail-tab.pinned .rail-close-btn {
+    display: none;
+}
+
+.tab.pinned .tab-close-btn {
+    display: none;
+}
+
 @media (prefers-color-scheme: dark) {
     .rail-tab.pinned {
         border-top: 3px solid var(--color-primary);
@@ -1957,4 +1965,3 @@ webview {
         background: #991b1b;
     }
 }
-
