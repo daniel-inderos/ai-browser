@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSelectTab: (callback) => ipcRenderer.on('select-tab', (_e, data) => callback(data)),
   onShowHistory: (callback) => ipcRenderer.on('show-history', callback),
   onShowSettings: (callback) => ipcRenderer.on('show-settings', callback),
+  onReopenClosedTab: (callback) => ipcRenderer.on('reopen-closed-tab', callback),
 
   setWindowButtonsVisible: (visible) => ipcRenderer.invoke('set-window-buttons-visible', visible),
 

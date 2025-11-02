@@ -209,6 +209,8 @@
                 this.sidebarCollapsed = false;
                 this.sidebarHoveredWhileCollapsed = false;
                 this.history = []; // Browser history for suggestions
+                this.closedTabs = []; // Recently closed tabs for reopening
+                this.maxClosedTabHistory = 25;
                 this.partition = null; // Cache partition to avoid async calls
                 
                 this.initializeElements();
@@ -988,6 +990,7 @@
                     this.showCommandPalette();
                 });
                 window.electronAPI.onCloseTab(() => this.closeActiveTab());
+                window.electronAPI.onReopenClosedTab(() => this.reopenLastClosedTab());
                 window.electronAPI.onNavigateBack(() => this.navigateBack());
                 window.electronAPI.onNavigateForward(() => this.navigateForward());
                 window.electronAPI.onRefreshPage(() => this.refreshPage());
@@ -1027,11 +1030,18 @@
                 document.addEventListener('keydown', (e) => {
                     // Handle keyboard shortcuts
                     if (e.metaKey || e.ctrlKey) {
-                        switch (e.key) {
-                            case 't':
-                                e.preventDefault();
+                        const key = e.key.toLowerCase();
+                        if (key === 't') {
+                            e.preventDefault();
+                            if (e.shiftKey) {
+                                this.reopenLastClosedTab();
+                            } else {
                                 this.showCommandPalette();
-                                break;
+                            }
+                            return;
+                        }
+
+                        switch (key) {
                             case 'w':
                                 e.preventDefault();
                                 this.closeActiveTab();
@@ -1056,7 +1066,7 @@
                                 e.preventDefault();
                                 this.showHistory();
                                 break;
-                            case 'C':
+                            case 'c':
                                 if (e.shiftKey) {
                                     e.preventDefault();
                                     this.copyCurrentUrl();
@@ -1068,9 +1078,9 @@
                                 break;
                             default: {
                                 // Number keys 1-9 to switch tabs like Chrome
-                                if (/^[1-9]$/.test(e.key)) {
+                                if (/^[1-9]$/.test(key)) {
                                     e.preventDefault();
-                                    this.selectTabByNumber(parseInt(e.key, 10));
+                                    this.selectTabByNumber(parseInt(key, 10));
                                 }
                                 break;
                             }
@@ -2275,6 +2285,8 @@
                     return;
                 }
                 
+                this.rememberClosedTab(tab);
+                
                 // Remove from DOM
                 tab.tabElement.remove();
                 tab.webview.remove();
@@ -2301,6 +2313,72 @@
             closeActiveTab() {
                 if (this.activeTabId) {
                     this.closeTab(this.activeTabId);
+                }
+            }
+
+            rememberClosedTab(tab) {
+                if (!tab) return;
+
+                let url = tab.url;
+                try {
+                    if (tab.webview && typeof tab.webview.getURL === 'function') {
+                        const currentUrl = tab.webview.getURL();
+                        if (currentUrl) {
+                            url = currentUrl;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Unable to read current URL for closed tab:', error);
+                }
+
+                let title = tab.title || 'New Tab';
+                try {
+                    if (tab.webview && typeof tab.webview.getTitle === 'function') {
+                        const currentTitle = tab.webview.getTitle();
+                        if (currentTitle) {
+                            title = currentTitle;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Unable to read current title for closed tab:', error);
+                }
+
+                const snapshot = {
+                    url: url || 'https://www.google.com',
+                    title,
+                    isMuted: !!tab.isMuted,
+                    isPinned: !!tab.isPinned
+                };
+
+                this.closedTabs.push(snapshot);
+                if (this.closedTabs.length > this.maxClosedTabHistory) {
+                    this.closedTabs.shift();
+                }
+            }
+
+            async reopenLastClosedTab() {
+                if (!this.closedTabs.length) {
+                    this.showToast('No recently closed tabs');
+                    return;
+                }
+
+                const lastClosed = this.closedTabs.pop();
+                const restoredState = {
+                    isMuted: !!lastClosed.isMuted,
+                    isPinned: !!lastClosed.isPinned
+                };
+
+                try {
+                    await this.createTab(
+                        lastClosed.url || 'https://www.google.com',
+                        null,
+                        lastClosed.title || 'New Tab',
+                        restoredState
+                    );
+                    this.showToast('Reopened closed tab');
+                } catch (error) {
+                    console.error('Error reopening closed tab:', error);
+                    this.showToast('Unable to reopen tab');
                 }
             }
 
