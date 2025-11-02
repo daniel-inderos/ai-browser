@@ -593,6 +593,16 @@ const createMenu = () => {
             }
           }
         },
+        {
+          label: 'Reopen Closed Tab',
+          accelerator: 'CmdOrCtrl+Shift+T',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('reopen-closed-tab');
+            }
+          }
+        },
         { type: 'separator' },
         {
           label: 'Quit',
