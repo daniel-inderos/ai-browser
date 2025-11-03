@@ -173,7 +173,8 @@ function saveTabs(tabs, activeTabId) {
       url: tab.url,
       title: tab.title || 'New Tab',
       isMuted: tab.isMuted || false,
-      isPinned: tab.isPinned || false
+      isPinned: tab.isPinned || false,
+      pinnedHomeUrl: tab.pinnedHomeUrl || null
     }));
     const data = {
       tabs: tabsData,
@@ -235,4 +236,3 @@ module.exports = {
   loadAdBlockerSettings,
   saveAdBlockerSettings
 };
-

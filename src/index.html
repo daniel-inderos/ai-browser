@@ -1157,6 +1157,7 @@
                     railCloseBtn: null,
                     isMuted: restoredState?.isMuted || false, // Track mute state
                     isPinned: restoredState?.isPinned || false, // Track pin state
+                    pinnedHomeUrl: restoredState?.pinnedHomeUrl ?? (restoredState?.isPinned ? url : null),
                 };
 
                 // Create enhanced tab UI with better accessibility
@@ -1387,6 +1388,9 @@
                 console.log('navigateTo result:', result);
                 if (result.success) {
                   tab.url = result.url;
+                  if (tab.isPinned && !tab.pinnedHomeUrl) {
+                      tab.pinnedHomeUrl = result.url;
+                  }
                   webview.setAttribute('src', result.url); // Set src instead of loadURL
                   
                   // Set AI icon immediately for newtab.html
@@ -1681,7 +1685,8 @@
                         url: tab.url,
                         title: tab.title || 'New Tab',
                         isMuted: tab.isMuted || false,
-                        isPinned: tab.isPinned || false
+                        isPinned: tab.isPinned || false,
+                        pinnedHomeUrl: tab.pinnedHomeUrl || null
                     }));
                     await window.electronAPI.saveTabs(tabsData, this.activeTabId);
                 } catch (error) {
@@ -2187,7 +2192,8 @@
                         for (const savedTab of savedTabsData.tabs) {
                             const restoredState = {
                                 isMuted: savedTab.isMuted || false,
-                                isPinned: savedTab.isPinned || false
+                                isPinned: savedTab.isPinned || false,
+                                pinnedHomeUrl: savedTab.pinnedHomeUrl || null
                             };
                             await this.createTab(savedTab.url, savedTab.id, savedTab.title, restoredState);
                         }
@@ -2275,6 +2281,7 @@
 
                 const tab = this.tabs[tabIndex];
                 if (tab.isPinned) {
+                    this.resetPinnedTabToHome(tab);
                     if (this.activeTabId === tabId) {
                         const nextTab = this.findNextTabToActivate(tabId);
                         if (nextTab) {
@@ -2314,6 +2321,60 @@
                 if (this.activeTabId) {
                     this.closeTab(this.activeTabId);
                 }
+            }
+
+            resetPinnedTabToHome(tab) {
+                if (!tab || !tab.isPinned || !tab.pinnedHomeUrl) {
+                    return;
+                }
+
+                const targetUrl = tab.pinnedHomeUrl;
+                let currentUrl = null;
+
+                try {
+                    if (tab.webview && typeof tab.webview.getURL === 'function') {
+                        currentUrl = tab.webview.getURL();
+                    }
+                } catch (error) {
+                    console.warn('Unable to read current URL for pinned tab:', error);
+                }
+
+                if (tab.webview) {
+                    const shouldLoad = currentUrl !== targetUrl || !currentUrl;
+                    if (shouldLoad) {
+                        if (typeof tab.webview.loadURL === 'function') {
+                            tab.webview.loadURL(targetUrl);
+                        } else {
+                            tab.webview.setAttribute('src', targetUrl);
+                        }
+                    }
+                }
+
+                tab.url = targetUrl;
+
+                if (this.activeTabId === tab.id) {
+                    this.urlBar.value = this.getDisplayUrl(targetUrl);
+                    this.updateNavBarVisibility(targetUrl);
+                }
+
+                this.saveTabsDebounced();
+            }
+
+            getEffectiveTabUrl(tab) {
+                if (!tab) return null;
+
+                try {
+                    if (tab.webview && typeof tab.webview.getURL === 'function') {
+                        const currentUrl = tab.webview.getURL();
+                        if (currentUrl) {
+                            return currentUrl;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Unable to read current URL for tab:', error);
+                }
+
+                return tab.url || null;
             }
 
             rememberClosedTab(tab) {
@@ -2438,6 +2499,11 @@
 
                 // Toggle pin state
                 tab.isPinned = !tab.isPinned;
+                if (tab.isPinned) {
+                    tab.pinnedHomeUrl = this.getEffectiveTabUrl(tab);
+                } else {
+                    tab.pinnedHomeUrl = null;
+                }
 
                 // Update visual indicator
                 this.updateTabVisuals(tab);
