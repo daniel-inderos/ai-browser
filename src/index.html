@@ -1176,8 +1176,25 @@
                 
                 const tabFavicon = document.createElement('img');
                 tabFavicon.className = 'tab-favicon';
-                // Use empty src initially; will update once favicon arrives
                 tabFavicon.alt = '';
+                
+                // Helper to create loading indicator favicon
+                const getLoadingFavicon = () => {
+                    // Detect dark mode
+                    const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    const circleColor = isDarkMode ? '#6B7280' : '#9CA3AF'; // Gray-500 for dark, Gray-400 for light
+                    
+                    // Simple circle loading indicator
+                    return 'data:image/svg+xml,' + encodeURIComponent(`
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="8" cy="8" r="6" stroke="${circleColor}" stroke-width="1.5" fill="none" opacity="0.6"/>
+                            <circle cx="8" cy="8" r="3" fill="${circleColor}" opacity="0.4"/>
+                        </svg>
+                    `);
+                };
+                
+                // Set loading indicator as initial favicon
+                tabFavicon.src = getLoadingFavicon();
                 
                 // Helper to set AI logo for newtab.html
                 const setAIIcon = () => {
@@ -1279,6 +1296,8 @@
                     const railFavicon = document.createElement('img');
                     railFavicon.className = 'rail-favicon';
                     railFavicon.alt = '';
+                    // Set loading indicator as initial favicon
+                    railFavicon.src = getLoadingFavicon();
                     tab.railFavicon = railFavicon;
 
                     const railTitle = document.createElement('span');
@@ -1545,9 +1564,9 @@
 
                 webview.addEventListener('did-navigate', (e) => {
                     tab.url = e.url;
-                    // Clear favicon when navigating to new main page
-                    tabFavicon.src = '';
-                    if (tab.railFavicon) tab.railFavicon.src = '';
+                    // Show loading indicator when navigating to new main page
+                    tabFavicon.src = getLoadingFavicon();
+                    if (tab.railFavicon) tab.railFavicon.src = getLoadingFavicon();
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = this.getDisplayUrl(e.url);
                         this.updateNavBarVisibility(e.url);
@@ -1558,9 +1577,9 @@
 
                 webview.addEventListener('did-navigate-in-page', (e) => {
                     tab.url = e.url;
-                    // Clear favicon for in-page navigations too (e.g., SPA route changes)
-                    tabFavicon.src = '';
-                    if (tab.railFavicon) tab.railFavicon.src = '';
+                    // Show loading indicator for in-page navigations (e.g., SPA route changes)
+                    tabFavicon.src = getLoadingFavicon();
+                    if (tab.railFavicon) tab.railFavicon.src = getLoadingFavicon();
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = this.getDisplayUrl(e.url);
                         this.updateNavBarVisibility(e.url);
