@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPreloadPath: () => ipcRenderer.invoke('get-preload-path'),
 
   // AI Chat
-  sendChat: (id, messages, contexts) => ipcRenderer.invoke('chat-send', { id, messages, contexts }),
+  sendChat: (id, messages, contexts, webSearchOptions) => ipcRenderer.invoke('chat-send', { id, messages, contexts, webSearchOptions }),
   onChatStream: (callback) => ipcRenderer.on('chat-stream', (_e, data) => callback(data)),
 
   // History

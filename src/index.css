@@ -1414,6 +1414,103 @@ webview {
     border-radius: 0;
 }
 
+/* ==================== Chat Status Indicator ==================== */
+
+.chat-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: var(--spacing-2) var(--spacing-3);
+    background: var(--color-background-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    gap: var(--spacing-2);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.chat-status-indicator::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    animation: pulse-dot 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+.status-text {
+    font-weight: var(--font-weight-medium);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes pulse-dot {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+}
+
+/* ==================== Chat Citations ==================== */
+
+.chat-citations {
+    margin-top: var(--spacing-3);
+    padding-top: var(--spacing-3);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--font-size-xs);
+}
+
+.citations-title,
+.sources-title {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-2);
+    font-size: var(--font-size-xs);
+}
+
+.citations-list,
+.sources-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+}
+
+.citation-item,
+.source-item {
+    color: var(--color-accent);
+    text-decoration: none;
+    word-break: break-all;
+    transition: color var(--transition-fast);
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.citation-item:hover,
+.source-item:hover {
+    color: var(--color-accent-hover);
+    text-decoration: underline;
+}
+
+.citation-item:visited,
+.source-item:visited {
+    color: var(--color-accent-visited);
+}
+
 /* ==================== Command Palette ==================== */
 
 .command-palette-backdrop {

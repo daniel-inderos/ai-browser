@@ -839,8 +839,14 @@
                 window.electronAPI.onChatStream(streamHandler);
 
                 try {
+                    // Enable web search for ask section
+                    const webSearchOptions = {
+                        enableWebSearch: true,
+                        model: 'gpt-5',
+                        externalWebAccess: true
+                    };
                     // Fire and forget so we don't miss early tokens
-                    window.electronAPI.sendChat(reqId, session, contexts);
+                    window.electronAPI.sendChat(reqId, session, contexts, webSearchOptions);
                 } catch (error) {
                     console.error('Error sending chat request:', error);
                     // Send error back to newtab immediately
@@ -1495,6 +1501,13 @@
                             }
                             if (this.activeTabId === tab.id) {
                                 this.urlBar.value = newTitle;
+                            }
+                            // If chatId is provided, update the tab URL to use chatId instead of query
+                            if (arg.chatId && tab.url.includes('newtab.html')) {
+                                const newtabPath = tab.url.split('?')[0];
+                                tab.url = `${newtabPath}?mode=ask&chatId=${arg.chatId}`;
+                                // Save tabs with the updated URL
+                                this.saveTabsDebounced();
                             }
                             // Ensure AI icon is set for newtab
                             if (tab.url && tab.url.includes('newtab.html')) {
@@ -2677,23 +2690,43 @@
                     }
                 }
 
-                // Add placeholder for assistant message to session
-                const assistantMessage = { role: 'assistant', content: '' };
-                session.push(assistantMessage);
-                const assistantMessageIndex = session.length - 1;
+                // Don't add assistant message to session yet - we'll add it when we start receiving tokens
+                // This prevents showing an empty assistant message alongside the status indicator
+                let assistantMessage = null;
+                let assistantMessageIndex = -1;
             
-                // Re-render to show assistant placeholder
+                // Re-render to show user message
                 this.renderChatHistory();
                 this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
             
                 // Generate unique request ID and send to main process
                 const reqId = Date.now().toString();
-                window.electronAPI.sendChat(reqId, session.slice(0, -1), contexts); // Send all contexts
+                // Enable web search for ask section (sidebar chat)
+                const webSearchOptions = {
+                    enableWebSearch: true,
+                    model: 'gpt-5',
+                    externalWebAccess: true
+                };
+                
+                // Show status indicator in chat history - start with "Searching the web..." since web search is enabled
+                this.showStatusIndicator('Searching the web...');
+                
+                window.electronAPI.sendChat(reqId, session, contexts, webSearchOptions); // Send all messages (no assistant placeholder yet)
             
                 const streamHandler = (data) => {
                     if (data.id !== reqId) return;
             
                     if (data.token) {
+                        // Add assistant message to session when we receive first token
+                        if (!assistantMessage) {
+                            assistantMessage = { role: 'assistant', content: '' };
+                            session.push(assistantMessage);
+                            assistantMessageIndex = session.length - 1;
+                            // Hide status indicator and render the actual assistant message
+                            this.hideStatusIndicator();
+                            this.renderChatHistory();
+                        }
+                        
                         // Always update the session state in the background
                         assistantMessage.content += data.token;
             
@@ -2707,7 +2740,27 @@
                                 this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
                             }
                         }
+                    } else if (data.metadata) {
+                        // Store metadata (sources, citations) in the assistant message
+                        if (!assistantMessage.metadata) {
+                            assistantMessage.metadata = {};
+                        }
+                        if (data.metadata.sources) {
+                            assistantMessage.metadata.sources = data.metadata.sources;
+                        }
+                        if (data.metadata.citations) {
+                            assistantMessage.metadata.citations = data.metadata.citations;
+                        }
                     } else if (data.done) {
+                        // Store final metadata if present
+                        if (data.sources) {
+                            if (!assistantMessage.metadata) assistantMessage.metadata = {};
+                            assistantMessage.metadata.sources = data.sources;
+                        }
+                        if (data.citations) {
+                            if (!assistantMessage.metadata) assistantMessage.metadata = {};
+                            assistantMessage.metadata.citations = data.citations;
+                        }
                         // Final state is already in assistantMessage.content
                         // Re-render one last time with markdown if the tab is active
                         if (this.activeTabId === tabId) {
@@ -2715,8 +2768,13 @@
                             if (msgContainer) {
                                 const contentEl = msgContainer.querySelector('.chat-content');
                                 contentEl.innerHTML = this.marked.parse(assistantMessage.content);
+                                // Add citations if available
+                                this.renderCitations(msgContainer, assistantMessage.metadata);
                             }
                         }
+                        // Hide status indicator when done
+                        this.hideStatusIndicator();
+                        
                         // Save chat session after completion
                         this.saveChatSession(tabId);
                         window.electronAPI.removeListener('chat-stream', streamHandler);
@@ -2725,6 +2783,10 @@
                         if (this.activeTabId === tabId) {
                             this.renderChatHistory(); // Re-render to show the error
                         }
+                        
+                        // Hide status indicator on error
+                        this.hideStatusIndicator();
+                        
                         window.electronAPI.removeListener('chat-stream', streamHandler);
                     }
                 };
@@ -2929,15 +2991,141 @@
                     const content = document.createElement('div');
                     content.className = 'chat-content';
                     if (msg.role === 'assistant') {
-                        content.innerHTML = this.marked.parse(msg.content);
+                        content.innerHTML = this.marked.parse(msg.content || '');
                     } else {
-                        content.textContent = msg.content;
+                        content.textContent = msg.content || '';
                     }
                     wrapper.appendChild(label);
                     wrapper.appendChild(content);
+                    // Add citations if available
+                    if (msg.role === 'assistant' && msg.metadata) {
+                        this.renderCitations(wrapper, msg.metadata);
+                    }
                     this.chatHistory.appendChild(wrapper);
                 });
                 this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+            }
+
+            renderCitations(msgContainer, metadata) {
+                if (!metadata || !msgContainer) return;
+                
+                // Remove existing citations container if present
+                const existingCitations = msgContainer.querySelector('.chat-citations');
+                if (existingCitations) {
+                    existingCitations.remove();
+                }
+                
+                const citations = metadata.citations || [];
+                const sources = metadata.sources || [];
+                
+                // Only render if we have citations or sources
+                if (citations.length === 0 && sources.length === 0) return;
+                
+                const citationsContainer = document.createElement('div');
+                citationsContainer.className = 'chat-citations';
+                
+                // Render citations (inline citations from the response)
+                if (citations.length > 0) {
+                    const citationsTitle = document.createElement('div');
+                    citationsTitle.className = 'citations-title';
+                    citationsTitle.textContent = 'Sources:';
+                    citationsContainer.appendChild(citationsTitle);
+                    
+                    const citationsList = document.createElement('div');
+                    citationsList.className = 'citations-list';
+                    
+                    // Use unique citations by URL
+                    const uniqueCitations = new Map();
+                    citations.forEach(citation => {
+                        if (citation.url && !uniqueCitations.has(citation.url)) {
+                            uniqueCitations.set(citation.url, citation);
+                        }
+                    });
+                    
+                    uniqueCitations.forEach(citation => {
+                        const citationItem = document.createElement('a');
+                        citationItem.className = 'citation-item';
+                        citationItem.href = citation.url;
+                        citationItem.target = '_blank';
+                        citationItem.rel = 'noopener noreferrer';
+                        citationItem.textContent = citation.title || citation.url;
+                        citationItem.title = citation.url;
+                        citationsList.appendChild(citationItem);
+                    });
+                    
+                    citationsContainer.appendChild(citationsList);
+                }
+                
+                // Render sources (all URLs consulted)
+                if (sources.length > 0 && sources.length > (metadata.citations?.length || 0)) {
+                    const sourcesTitle = document.createElement('div');
+                    sourcesTitle.className = 'sources-title';
+                    sourcesTitle.textContent = 'All sources consulted:';
+                    citationsContainer.appendChild(sourcesTitle);
+                    
+                    const sourcesList = document.createElement('div');
+                    sourcesList.className = 'sources-list';
+                    
+                    sources.forEach(source => {
+                        if (typeof source === 'string') {
+                            const sourceItem = document.createElement('a');
+                            sourceItem.className = 'source-item';
+                            sourceItem.href = source;
+                            sourceItem.target = '_blank';
+                            sourceItem.rel = 'noopener noreferrer';
+                            sourceItem.textContent = source;
+                            sourcesList.appendChild(sourceItem);
+                        }
+                    });
+                    
+                    citationsContainer.appendChild(sourcesList);
+                }
+                
+                if (citationsContainer.children.length > 0) {
+                    msgContainer.appendChild(citationsContainer);
+                }
+            }
+
+            showStatusIndicator(text) {
+                if (!this.chatHistory) return;
+                // Remove existing status indicator if present
+                this.hideStatusIndicator();
+                // Create new status indicator
+                const statusWrapper = document.createElement('div');
+                statusWrapper.className = 'chat-msg assistant-msg';
+                statusWrapper.id = 'chat-status-indicator-wrapper';
+                const label = document.createElement('div');
+                label.className = 'chat-label';
+                label.textContent = 'AI';
+                const statusContainer = document.createElement('div');
+                statusContainer.className = 'chat-status-indicator';
+                const statusText = document.createElement('span');
+                statusText.className = 'status-text';
+                statusText.textContent = text;
+                statusContainer.appendChild(statusText);
+                statusWrapper.appendChild(label);
+                statusWrapper.appendChild(statusContainer);
+                this.chatHistory.appendChild(statusWrapper);
+                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+            }
+
+            updateStatusIndicator(text) {
+                if (!this.chatHistory) return;
+                const statusWrapper = document.getElementById('chat-status-indicator-wrapper');
+                if (statusWrapper) {
+                    const statusText = statusWrapper.querySelector('.status-text');
+                    if (statusText) {
+                        statusText.textContent = text;
+                    }
+                }
+            }
+
+            hideStatusIndicator() {
+                if (!this.chatHistory) return;
+                const statusWrapper = document.getElementById('chat-status-indicator-wrapper');
+                if (statusWrapper) {
+                    statusWrapper.remove();
+                }
             }
 
             clearChat() {
@@ -2945,6 +3133,8 @@
                 if (this.chatHistory) {
                     this.chatHistory.innerHTML = '';
                 }
+                // Hide status indicator when clearing chat
+                this.hideStatusIndicator();
                 // Also reset the context dismissal state
                 const tab = this.tabs.find(t => t.id === this.activeTabId);
                 if (tab) {

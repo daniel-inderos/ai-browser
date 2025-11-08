@@ -63,7 +63,7 @@
         #searchInput:focus { background: var(--color-surface); border-color: var(--color-border-focus); box-shadow: var(--shadow-focus), var(--shadow-md); }
 
         /* --- ASK WRAPPER (CHAT UI) --- */
-        #askWrapper { width: 100%; max-width: 860px; height: 72vh; display: flex; flex-direction: column; gap: 0.75rem; transition: max-width var(--transition-normal), height var(--transition-normal), transform var(--transition-normal); }
+        #askWrapper { width: 100%; max-width: 100%; height: 100vh; display: flex; flex-direction: column; gap: 0; transition: max-width var(--transition-normal), height var(--transition-normal), transform var(--transition-normal); }
 
         /* Header */
         .ask-header { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--spacing-1); color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
@@ -73,7 +73,7 @@
         .icon-btn:hover { background: var(--color-surface-hover); transform: translateY(-1px); }
 
         /* Chat surface */
-        .chat-surface { position: relative; flex: 1; display: flex; flex-direction: column; gap: var(--spacing-3); padding: var(--spacing-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: linear-gradient(180deg, var(--color-surface), var(--color-background)); box-shadow: var(--shadow-md); overflow: hidden; }
+        .chat-surface { position: relative; flex: 1; display: flex; flex-direction: column; gap: var(--spacing-3); padding: var(--spacing-4); border: none; border-radius: 0; background: transparent; box-shadow: none; overflow: hidden; height: 100%; }
         .chat-history { flex: 1; overflow-y: auto; padding-right: var(--spacing-2); scroll-behavior: smooth; }
         .chat-history::-webkit-scrollbar { width: 10px; }
         .chat-history::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 10px; }
@@ -87,10 +87,10 @@
 
         /* Message bubbles */
         .chat-msg { display: grid; grid-template-columns: 36px 1fr; gap: var(--spacing-3); margin-bottom: var(--spacing-3); }
-        .avatar { width: 36px; height: 36px; border-radius: var(--radius-full); display: flex; align-items:center; justify-content:center; border: 1px solid var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary); font-weight: var(--font-weight-semibold); }
-        .bubble { padding: var(--spacing-3); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
-        .user-msg .bubble { background: var(--color-surface-elevated); }
-        .assistant-msg .bubble { background: var(--color-surface); }
+        .avatar { width: 36px; height: 36px; border-radius: var(--radius-full); display: flex; align-items:center; justify-content:center; border: none; background: var(--color-surface-elevated); color: var(--color-text-secondary); font-weight: var(--font-weight-semibold); }
+        .bubble { padding: var(--spacing-3); border: none; border-radius: var(--radius-lg); background: transparent; box-shadow: none; }
+        .user-msg .bubble { background: transparent; }
+        .assistant-msg .bubble { background: transparent; }
         .chat-label { display:none; }
         .chat-content { line-height: var(--line-height-relaxed); font-size: var(--font-size-sm); }
         .chat-content pre { background: var(--color-background-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-3); overflow-x:auto; font-family: var(--font-family-mono); font-size: 12px; position: relative; }
@@ -120,14 +120,18 @@
 
         /* Expanded Ask mode (full page) */
         body.is-ask-expanded .container {
-            padding: var(--spacing-6);
+            padding: 0;
+            height: 100vh;
         }
         body.is-ask-expanded .main-wrapper {
-            max-width: 1200px;
+            max-width: 100%;
+            width: 100%;
+            height: 100vh;
             align-items: stretch;
+            padding: 0;
         }
         @media (max-width: 1280px) {
-            body.is-ask-expanded .main-wrapper { max-width: none; }
+            body.is-ask-expanded .main-wrapper { max-width: 100%; }
         }
         body.is-ask-expanded .logo {
             opacity: 0;
@@ -148,12 +152,14 @@
             box-shadow: var(--shadow-md);
         }
         body.is-ask-expanded #askWrapper {
-            max-width: none;
-            height: calc(100vh - 2 * var(--spacing-6));
+            max-width: 100%;
+            width: 100%;
+            height: 100vh;
             transform: translateZ(0);
         }
         body.is-ask-expanded .chat-surface {
-            border-radius: var(--radius-xl);
+            border-radius: 0;
+            height: 100vh;
         }
         @media (prefers-reduced-motion: reduce) {
             .container, .main-wrapper, #askWrapper, .mode-toggle, .logo { transition: none !important; }
@@ -179,20 +185,6 @@
 
             <!-- Ask Mode UI (hidden by default) -->
             <div id="askWrapper" style="display:none;">
-                <div class="ask-header">
-                    <div class="ask-badge" title="Ask Assistant">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                        Ask
-                    </div>
-                    <div class="ask-actions">
-                        <button class="icon-btn" id="focusUrlBtn" title="Focus address (⌘L)" aria-label="Focus address">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                        </button>
-                        <button class="icon-btn" id="clearChatTopBtn" title="Clear chat" aria-label="Clear chat">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6v12a2 2 0 002 2h4a2 2 0 002-2V6"/><line x1="10" y1="11" x2="14" y2="11"/><line x1="10" y1="15" x2="14" y2="15"/></svg>
-                        </button>
-                    </div>
-                </div>
                 <div class="chat-surface">
                     <div class="chat-history" id="chatHistory" aria-live="polite"></div>
                     <div class="chat-input-area">
@@ -236,20 +228,27 @@
                 // Check if we should open in Ask mode based on URL parameter
                 const urlParams = new URLSearchParams(window.location.search);
                 const chatIdParam = urlParams.get('chatId');
-                const forceAskMode = urlParams.get('mode') === 'ask' || !!chatIdParam;
+                const queryParam = urlParams.get('query');
+                const forceAskMode = urlParams.get('mode') === 'ask' || !!chatIdParam || !!queryParam;
 
+                // Prioritize chatId over query - if chatId exists, load saved chat instead of re-executing query
                 if (chatIdParam) {
                     this.pendingChatId = chatIdParam;
+                    // Clear query param if chatId exists to prevent re-execution
+                    if (queryParam) {
+                        const newUrl = new URL(window.location);
+                        newUrl.searchParams.delete('query');
+                        window.history.replaceState({}, '', newUrl);
+                    }
+                } else if (queryParam) {
+                    // Only auto-send query if no chatId exists
+                    this.autoSendQuery = queryParam;
                 }
 
                 if (forceAskMode) {
                     const modeToggle = document.getElementById('modeToggle');
                     if (modeToggle) {
                         modeToggle.style.display = 'none';
-                    }
-                    // Only apply auto-send when no saved chat is being restored
-                    if (!this.pendingChatId) {
-                        this.autoSendQuery = urlParams.get('query');
                     }
                     this.switchMode('ask');
                 }
@@ -351,10 +350,8 @@
                     chatInputForm: document.getElementById('chatInputForm'),
                     chatInput: document.getElementById('chatInput'),
                     tabSuggestions: document.getElementById('tabSuggestions'),
-                    chatClearBtn: document.getElementById('clearChatTopBtn'),
                     chatSendBtn: document.getElementById('chatSendBtn'),
                     chatStopBtn: document.getElementById('chatStopBtn'),
-                    focusUrlBtn: document.getElementById('focusUrlBtn'),
                 };
                 this.session = [];
                 this.referencedTabs = new Set();
@@ -388,9 +385,7 @@
                 this.elements.chatInput.addEventListener('input', () => this.onEditorInput());
                 this.elements.chatInput.addEventListener('keydown', (e) => this.onEditorKeydown(e));
                 this.elements.tabSuggestions.addEventListener('click', (e) => this.handleSuggestionClick(e));
-                this.elements.chatClearBtn.addEventListener('click', () => this.clearChat());
                 this.elements.chatStopBtn.addEventListener('click', () => this.stopStreaming());
-                this.elements.focusUrlBtn.addEventListener('click', () => this.sendShortcut('focus-url'));
                 window.addEventListener('message', (e) => this.handleHostMessage(e));
                 if (window.electronAPI && window.electronAPI.onFromHost) {
                     window.electronAPI.onFromHost((data) => this.handleHostMessage({ data }));
@@ -421,8 +416,11 @@
                 this.elements.chatSendBtn.disabled = true;
 
                 this.session.push({ role: 'user', content });
-                const assistantMsg = { role: 'assistant', content: '' };
-                this.session.push(assistantMsg);
+                // Don't add assistant message to session yet - we'll add it when we start receiving tokens
+                // This prevents showing an empty assistant message alongside the status indicator
+                let assistantMsg = null;
+                let assistantIndex = -1;
+                
                 this.renderChatHistory();
 
                 // Update document title with first message
@@ -436,12 +434,15 @@
                 }
 
                 const reqId = Date.now().toString();
-                this.currentStream = { id: reqId, assistantIndex: this.session.length - 1 };
+                this.currentStream = { id: reqId, assistantIndex: -1 }; // Will be set when we add the message
                 this.toggleStreamingUI(true);
+
+                // Show status indicator in chat history - start with "Searching the web..." since web search is enabled
+                this.showStatusIndicator('Searching the web...');
 
                 const chatData = {
                     reqId,
-                    session: this.session.slice(0, -1),
+                    session: this.session, // Send all messages (no assistant placeholder to remove)
                     referencedTabIds: [...this.referencedTabs]
                 };
                 console.log('NewTab: sendToHost new-tab-chat-send:', chatData);
@@ -453,14 +454,64 @@
             handleStreamResponse(data) {
                 if (!this.currentStream || data.id !== this.currentStream.id) return;
                 
-                const assistantMsg = this.session[this.currentStream.assistantIndex];
-                if (data.token) {
+                // Get or create assistant message
+                let assistantMsg = null;
+                if (this.currentStream.assistantIndex >= 0) {
+                    assistantMsg = this.session[this.currentStream.assistantIndex];
+                }
+                
+                // Add assistant message to session when we receive first token
+                if (!assistantMsg && data.token) {
+                    assistantMsg = { role: 'assistant', content: '' };
+                    this.session.push(assistantMsg);
+                    const assistantIndex = this.session.length - 1;
+                    this.currentStream.assistantIndex = assistantIndex;
+                    // Hide status indicator and render the actual assistant message
+                    this.hideStatusIndicator();
+                    this.renderChatHistory();
+                }
+                
+                if (assistantMsg && data.token) {
+                    // Update status to "Generating..." once we start receiving tokens (if still showing)
+                    this.updateStatusIndicator('Generating...');
+                    
                     assistantMsg.content += data.token;
                     this.updateAssistantMessage(assistantMsg.content, false);
                 }
-                if (data.done || data.error) {
+                if (assistantMsg && data.metadata) {
+                    // Store metadata (sources, citations) in the assistant message
+                    if (!assistantMsg.metadata) {
+                        assistantMsg.metadata = {};
+                    }
+                    if (data.metadata.sources) {
+                        assistantMsg.metadata.sources = data.metadata.sources;
+                    }
+                    if (data.metadata.citations) {
+                        assistantMsg.metadata.citations = data.metadata.citations;
+                    }
+                }
+                if (assistantMsg && (data.done || data.error)) {
                     if(data.error) assistantMsg.content = `Error: ${data.error}`;
+                    // Store final metadata if present
+                    if (data.sources) {
+                        if (!assistantMsg.metadata) assistantMsg.metadata = {};
+                        assistantMsg.metadata.sources = data.sources;
+                    }
+                    if (data.citations) {
+                        if (!assistantMsg.metadata) assistantMsg.metadata = {};
+                        assistantMsg.metadata.citations = data.citations;
+                    }
                     this.updateAssistantMessage(assistantMsg.content, true);
+                    // Render citations if available
+                    const msgEls = this.elements.chatHistory.querySelectorAll('.assistant-msg');
+                    const lastMsgEl = msgEls[msgEls.length - 1];
+                    if (lastMsgEl && assistantMsg.metadata) {
+                        this.renderCitations(lastMsgEl, assistantMsg.metadata);
+                    }
+                    
+                    // Hide status indicator when done
+                    this.hideStatusIndicator();
+                    
                     this.currentStream = null;
                     this.toggleStreamingUI(false);
                     // Save chat session after completion
@@ -489,21 +540,85 @@
                     this.renderEmptyState();
                     return;
                 }
-                this.elements.chatHistory.innerHTML = this.session.map(msg => {
+                this.elements.chatHistory.innerHTML = this.session.map((msg, index) => {
                     const safe = (s) => (s || '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
                     const content = msg.role === 'assistant' ? this.marked.parse(msg.content || '') : safe(msg.content || '');
                     const avatar = msg.role === 'user' ? 'You' : 'AI';
+                    const citationsHtml = msg.role === 'assistant' && msg.metadata ? this.renderCitationsHtml(msg.metadata) : '';
                     return `
                         <div class="chat-msg ${msg.role}-msg">
                             <div class="avatar">${avatar.substring(0,2)}</div>
                             <div class="bubble">
                                 <div class="chat-content">${content}</div>
+                                ${citationsHtml}
                             </div>
                         </div>`;
                 }).join('');
                 // Add copy buttons to any code blocks
                 this.elements.chatHistory.querySelectorAll('.assistant-msg').forEach(wrapper => this.decorateCodeBlocks(wrapper));
                 this.elements.chatHistory.scrollTop = this.elements.chatHistory.scrollHeight;
+            }
+
+            renderCitationsHtml(metadata) {
+                if (!metadata) return '';
+                
+                const citations = metadata.citations || [];
+                const sources = metadata.sources || [];
+                
+                if (citations.length === 0 && sources.length === 0) return '';
+                
+                let html = '<div class="chat-citations">';
+                
+                // Render citations
+                if (citations.length > 0) {
+                    const uniqueCitations = new Map();
+                    citations.forEach(citation => {
+                        if (citation.url && !uniqueCitations.has(citation.url)) {
+                            uniqueCitations.set(citation.url, citation);
+                        }
+                    });
+                    
+                    html += '<div class="citations-title">Sources:</div><div class="citations-list">';
+                    uniqueCitations.forEach(citation => {
+                        const title = this.escapeHtml(citation.title || citation.url);
+                        const url = this.escapeHtml(citation.url);
+                        html += `<a href="${url}" class="citation-item" target="_blank" rel="noopener noreferrer" title="${url}">${title}</a>`;
+                    });
+                    html += '</div>';
+                }
+                
+                // Render sources
+                if (sources.length > 0 && sources.length > (metadata.citations?.length || 0)) {
+                    html += '<div class="sources-title">All sources consulted:</div><div class="sources-list">';
+                    sources.forEach(source => {
+                        if (typeof source === 'string') {
+                            const escapedSource = this.escapeHtml(source);
+                            html += `<a href="${escapedSource}" class="source-item" target="_blank" rel="noopener noreferrer">${escapedSource}</a>`;
+                        }
+                    });
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                return html;
+            }
+
+            renderCitations(msgContainer, metadata) {
+                if (!metadata || !msgContainer) return;
+                
+                // Remove existing citations container if present
+                const existingCitations = msgContainer.querySelector('.chat-citations');
+                if (existingCitations) {
+                    existingCitations.remove();
+                }
+                
+                const citationsHtml = this.renderCitationsHtml(metadata);
+                if (citationsHtml) {
+                    const bubble = msgContainer.querySelector('.bubble');
+                    if (bubble) {
+                        bubble.insertAdjacentHTML('beforeend', citationsHtml);
+                    }
+                }
             }
 
             handleChatInput() {
@@ -573,12 +688,59 @@
                 });
             }
 
+            showStatusIndicator(text) {
+                if (!this.elements.chatHistory) return;
+                // Remove existing status indicator if present
+                this.hideStatusIndicator();
+                // Create new status indicator
+                const statusWrapper = document.createElement('div');
+                statusWrapper.className = 'chat-msg assistant-msg';
+                statusWrapper.id = 'chat-status-indicator-wrapper';
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+                avatar.textContent = 'AI';
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                const statusContainer = document.createElement('div');
+                statusContainer.className = 'chat-status-indicator';
+                const statusText = document.createElement('span');
+                statusText.className = 'status-text';
+                statusText.textContent = text;
+                statusContainer.appendChild(statusText);
+                bubble.appendChild(statusContainer);
+                statusWrapper.appendChild(avatar);
+                statusWrapper.appendChild(bubble);
+                this.elements.chatHistory.appendChild(statusWrapper);
+                this.elements.chatHistory.scrollTop = this.elements.chatHistory.scrollHeight;
+            }
+
+            updateStatusIndicator(text) {
+                if (!this.elements.chatHistory) return;
+                const statusWrapper = document.getElementById('chat-status-indicator-wrapper');
+                if (statusWrapper) {
+                    const statusText = statusWrapper.querySelector('.status-text');
+                    if (statusText) {
+                        statusText.textContent = text;
+                    }
+                }
+            }
+
+            hideStatusIndicator() {
+                if (!this.elements.chatHistory) return;
+                const statusWrapper = document.getElementById('chat-status-indicator-wrapper');
+                if (statusWrapper) {
+                    statusWrapper.remove();
+                }
+            }
+
             clearChat() {
                 this.session = [];
                 this.referencedTabs.clear();
                 this.renderChatHistory();
                 this.renderContextPills();
                 this.updatePlaceholder();
+                // Hide status indicator when clearing chat
+                this.hideStatusIndicator();
                 // Generate new session ID for next chat
                 this.sessionId = 'newtab-' + Date.now();
             }
@@ -632,8 +794,18 @@
                     const chatData = chats ? chats[chatId] : null;
                     if (!chatData || !Array.isArray(chatData.session)) {
                         console.warn('Saved chat not found for chatId:', chatId);
+                        // If chat not found, clear the chatId from URL to prevent retry loops
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.get('chatId') === chatId) {
+                            urlParams.delete('chatId');
+                            const newUrl = new URL(window.location);
+                            newUrl.search = urlParams.toString();
+                            window.history.replaceState({}, '', newUrl);
+                        }
                         return;
                     }
+                    // Set the sessionId to match the chatId so future saves work correctly
+                    this.sessionId = chatId;
                     const firstUserMessage = chatData.session.find((msg) => msg.role === 'user');
                     const fallbackTitle = firstUserMessage ? firstUserMessage.content.substring(0, 50) : 'AI Chat Session';
                     this.loadSavedSession({
@@ -655,9 +827,24 @@
                         if (firstUserMessage) {
                             const chatTitle = firstUserMessage.content.substring(0, 50);
                             document.title = chatTitle;
-                            // Send IPC message to update parent tab title and URL bar
+                            // Send IPC message to update parent tab title and URL with chatId
                             if (window.electronAPI && window.electronAPI.sendToHost) {
-                                window.electronAPI.sendToHost('update-title', { title: chatTitle });
+                                window.electronAPI.sendToHost('update-title', { 
+                                    title: chatTitle,
+                                    chatId: this.sessionId  // Include chatId so parent can update URL
+                                });
+                            }
+                            // Also update the URL directly in this window to ensure it's saved with chatId
+                            const urlParams = new URLSearchParams(window.location.search);
+                            if (urlParams.get('chatId') !== this.sessionId) {
+                                // Remove query param if it exists
+                                urlParams.delete('query');
+                                // Set chatId
+                                urlParams.set('chatId', this.sessionId);
+                                urlParams.set('mode', 'ask');
+                                const newUrl = new URL(window.location);
+                                newUrl.search = urlParams.toString();
+                                window.history.replaceState({}, '', newUrl);
                             }
                         }
                     }

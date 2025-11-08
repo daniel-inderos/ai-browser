@@ -367,7 +367,7 @@ ipcMain.handle('navigate-to', async (event, url) => {
   }
 });
 
-ipcMain.handle('chat-send', async (event, { id, messages, contexts }) => {
+ipcMain.handle('chat-send', async (event, { id, messages, contexts, webSearchOptions }) => {
   try {
     let finalMessages = messages;
     if (contexts && contexts.length > 0) {
@@ -384,13 +384,38 @@ ipcMain.handle('chat-send', async (event, { id, messages, contexts }) => {
       finalMessages = [systemMessage, ...messages];
     }
 
+    // Prepare web search options
+    const options = webSearchOptions || {};
+    
     let assistantMessage = '';
-    for await (const token of streamChat(finalMessages)) {
-      assistantMessage += token;
-      event.sender.send('chat-stream', { id, token });
+    let sources = [];
+    let citations = [];
+    
+    for await (const chunk of streamChat(finalMessages, options)) {
+      // Handle metadata objects (sources, citations)
+      if (typeof chunk === 'object' && chunk.type === 'metadata') {
+        if (chunk.sources) {
+          sources = chunk.sources;
+          event.sender.send('chat-stream', { id, metadata: { sources } });
+        }
+        if (chunk.citations) {
+          citations = chunk.citations;
+          event.sender.send('chat-stream', { id, metadata: { citations } });
+        }
+      } else if (typeof chunk === 'string') {
+        // Regular text token
+        assistantMessage += chunk;
+        event.sender.send('chat-stream', { id, token: chunk });
+      }
     }
-    // send final done signal
-    event.sender.send('chat-stream', { id, done: true });
+    
+    // Send final done signal with any collected metadata
+    event.sender.send('chat-stream', { 
+      id, 
+      done: true,
+      ...(sources.length > 0 && { sources }),
+      ...(citations.length > 0 && { citations })
+    });
     return { success: true };
   } catch (error) {
     console.error('Chat error', error);
