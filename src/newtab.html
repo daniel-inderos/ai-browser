@@ -232,6 +232,7 @@
                 this.autoSendQuery = null;
                 this.pendingChatId = null;
                 this.setupEventListeners();
+                this.notifyHostOfChatMode(this.mode);
                 
                 // Check if we should open in Ask mode based on URL parameter
                 const urlParams = new URLSearchParams(window.location.search);
@@ -291,14 +292,24 @@
                             e.preventDefault();
                             this.sendShortcut('focus-url');
                             break;
-                        case 'e': // Toggle chat sidebar in host
+                        case 'e': {
+                            // Ignore Cmd/Ctrl+E when in Ask (AI chat) mode so sidebar stays put
                             e.preventDefault();
-                            this.sendShortcut('toggle-chat');
+                            if (this.mode !== 'ask') {
+                                this.sendShortcut('toggle-chat');
+                            }
                             break;
+                        }
                         default:
                             break;
                     }
                 });
+            }
+
+            notifyHostOfChatMode(mode) {
+                if (window.electronAPI && window.electronAPI.sendToHost) {
+                    window.electronAPI.sendToHost('chat-mode', { mode });
+                }
             }
 
             sendShortcut(command) {
@@ -310,6 +321,7 @@
             switchMode(newMode) {
                 if (this.mode === newMode && !(newMode === 'ask' && this.pendingChatId)) return;
                 this.mode = newMode;
+                this.notifyHostOfChatMode(newMode);
 
                 const isSearch = newMode === 'search';
                 this.elements.modeSearch.classList.toggle('active', isSearch);
@@ -1044,11 +1056,6 @@
                 });
             }
 
-            sendShortcut(command) {
-                if (window.electronAPI && window.electronAPI.sendToHost) {
-                    window.electronAPI.sendToHost('shortcut', { command });
-                }
-            }
         }
 
         document.addEventListener('DOMContentLoaded', () => new NewTabManager());
