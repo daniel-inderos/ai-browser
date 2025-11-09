@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // AI Chat
   sendChat: (id, messages, contexts, webSearchOptions) => ipcRenderer.invoke('chat-send', { id, messages, contexts, webSearchOptions }),
+  cancelChat: (id) => ipcRenderer.invoke('chat-cancel', { id }),
   onChatStream: (callback) => ipcRenderer.on('chat-stream', (_e, data) => callback(data)),
 
   // History

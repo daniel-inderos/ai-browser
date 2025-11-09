@@ -187,6 +187,9 @@
                 </div>
             </div>
             <div class="command-palette-results" id="commandPaletteResults"></div>
+            <div class="command-palette-response" id="commandPaletteResponse" style="display: none;">
+                <div class="command-palette-response-content" id="commandPaletteResponseContent"></div>
+            </div>
         </div>
     </div>
 
@@ -315,6 +318,52 @@
                 return url || '';
             }
 
+            getFriendlyTabTitle(tab) {
+                if (!tab) {
+                    return 'Untitled tab';
+                }
+
+                const title = (tab.title || '').trim();
+                const url = tab.url || '';
+
+                // Prefer explicit titles that are not file paths
+                if (title && !title.startsWith('file://')) {
+                    return title;
+                }
+
+                // Map special pages to human-friendly labels
+                if (url.includes('newtab.html')) {
+                    return 'AI Chat';
+                }
+                if (url.includes('history.html')) {
+                    return 'History';
+                }
+                if (url.includes('settings.html')) {
+                    return 'Settings';
+                }
+
+                if (url) {
+                    try {
+                        const parsed = new URL(url);
+                        if (parsed.protocol === 'file:') {
+                            const segments = parsed.pathname.split('/').filter(Boolean);
+                            const fileName = segments.pop();
+                            if (fileName) {
+                                return fileName;
+                            }
+                        }
+                    } catch (err) {
+                        // ignore
+                    }
+                }
+
+                if (title) {
+                    return title;
+                }
+
+                return url || 'Untitled tab';
+            }
+
             injectLinkHandlerScript(webview) {
                 try {
                     // Inject script to handle middle click and Ctrl+Click
@@ -411,6 +460,8 @@
                 this.commandPaletteInput = document.getElementById('commandPaletteInput');
                 this.commandPaletteAutocomplete = document.getElementById('commandPaletteAutocomplete');
                 this.commandPaletteResults = document.getElementById('commandPaletteResults');
+                this.commandPaletteResponse = document.getElementById('commandPaletteResponse');
+                this.commandPaletteResponseContent = document.getElementById('commandPaletteResponseContent');
                 this.commandPaletteModeSearch = document.getElementById('commandPaletteModeSearch');
                 this.commandPaletteModeAsk = document.getElementById('commandPaletteModeAsk');
                 this.commandPaletteMode = 'search'; // Default mode
@@ -418,6 +469,7 @@
                 this.currentResults = []; // Store current results for autocomplete
                 this.isNavigatingResults = false; // Flag to prevent input reset during navigation
                 this.autocompleteText = ''; // Current autocomplete suggestion
+                this.activeCommandPaletteRequest = null; // Track active Ask mode request
 
                 // Listen for IPC messages from main process
                 window.electronAPI.onShowSettings(() => {
@@ -1773,11 +1825,35 @@
                 if (this.commandPaletteInput) {
                     this.commandPaletteInput.style.height = '';
                 }
+
+                // Cancel any active streaming request
+                if (this.activeCommandPaletteRequest) {
+                    window.electronAPI.cancelChat(this.activeCommandPaletteRequest);
+                    this.activeCommandPaletteRequest = null;
+                }
+
+                // Clean up response container
+                this.commandPaletteResponse.style.display = 'none';
+                this.commandPaletteResponseContent.textContent = '';
+                this.commandPaletteResults.style.display = '';
+
+                // Re-enable input
+                this.commandPaletteInput.disabled = false;
             }
 
             setCommandPaletteMode(mode) {
                 this.commandPaletteMode = mode;
-                
+
+                // Cancel any active streaming and clear response when switching modes
+                if (this.activeCommandPaletteRequest) {
+                    window.electronAPI.cancelChat(this.activeCommandPaletteRequest);
+                    this.activeCommandPaletteRequest = null;
+                }
+                this.commandPaletteResponse.style.display = 'none';
+                this.commandPaletteResponseContent.textContent = '';
+                this.commandPaletteResults.style.display = '';
+                this.commandPaletteInput.disabled = false;
+
                 if (mode === 'search') {
                     this.commandPaletteModeSearch.classList.add('active');
                     this.commandPaletteModeAsk.classList.remove('active');
@@ -1793,9 +1869,9 @@
                     }
                     this.commandPaletteInput.placeholder = 'Ask a question...';
                 }
-                
+
                 this.adjustCommandPaletteInputHeight();
-                
+
                 this.updateCommandPaletteResults();
                 this.commandPaletteInput.focus();
             }
@@ -1870,16 +1946,22 @@
                 }
                 
                 const results = [];
-                
+
                 // Add open tabs
                 this.tabs.forEach(tab => {
-                    if (tab.id !== this.activeTabId && 
-                        (!query || tab.title.toLowerCase().includes(query) || tab.url.toLowerCase().includes(query))) {
+                    const friendlyTitle = this.getFriendlyTabTitle(tab);
+                    const normalizedTitle = friendlyTitle.toLowerCase();
+                    const normalizedUrl = (tab.url || '').toLowerCase();
+                    const matchesQuery = !query || normalizedTitle.includes(query) || normalizedUrl.includes(query);
+                    if (tab.id !== this.activeTabId && matchesQuery) {
                         const favicon = tab.railFavicon ? tab.railFavicon.src : '';
+                        const friendlyUrl = tab.url && tab.url.includes('newtab.html')
+                            ? friendlyTitle
+                            : tab.url;
                         results.push({
                             type: 'tab',
-                            title: tab.title,
-                            url: tab.url,
+                            title: friendlyTitle,
+                            url: friendlyUrl,
                             favicon: this.getFaviconUrl(tab.url, favicon),
                             action: 'Switch to Tab',
                             data: tab
@@ -2206,10 +2288,15 @@
                     this.hideCommandPalette();
                     await this.createTab(targetUrl);
                 } else {
-                    // Ask mode: navigate to newtab.html with ask mode and optional query
+                    // Ask mode: open dedicated AI page instead of inline overlay
+                    if (!value) {
+                        this.hideCommandPalette();
+                        return;
+                    }
+
+                    const askUrl = `newtab.html?mode=ask&query=${encodeURIComponent(value)}`;
                     this.hideCommandPalette();
-                    const queryParam = value ? `&query=${encodeURIComponent(value)}` : '';
-                    await this.createTab(`newtab.html?mode=ask${queryParam}`);
+                    await this.createTab(askUrl);
                 }
             }
 
@@ -2322,6 +2409,22 @@
                     }
                     this.showToast('Pinned tabs stay open. Unpin to close.');
                     return;
+                }
+                
+                // Cancel any active chat requests for this tab's webview
+                if (tab.webview && tab.webview.getWebContents) {
+                    try {
+                        const webContents = tab.webview.getWebContents();
+                        if (webContents) {
+                            // Cancel all active requests for this webContents
+                            // The main process will handle this via the destroyed event,
+                            // but we can also try to send a cancel message if the webview is still alive
+                            const webContentsId = webContents.id;
+                            // Note: The webContents destroyed event in main process will handle cleanup
+                        }
+                    } catch (e) {
+                        // WebContents might already be destroyed, that's fine
+                    }
                 }
                 
                 this.rememberClosedTab(tab);
@@ -3099,9 +3202,31 @@
                 label.textContent = 'AI';
                 const statusContainer = document.createElement('div');
                 statusContainer.className = 'chat-status-indicator';
+                
+                // Add search icon
+                const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                iconSvg.setAttribute('width', '16');
+                iconSvg.setAttribute('height', '16');
+                iconSvg.setAttribute('viewBox', '0 0 24 24');
+                iconSvg.setAttribute('fill', 'none');
+                iconSvg.setAttribute('stroke', 'currentColor');
+                iconSvg.setAttribute('stroke-width', '2');
+                iconSvg.setAttribute('stroke-linecap', 'round');
+                iconSvg.setAttribute('stroke-linejoin', 'round');
+                iconSvg.classList.add('chat-status-indicator-icon');
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', '11');
+                circle.setAttribute('cy', '11');
+                circle.setAttribute('r', '8');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'm21 21-4.35-4.35');
+                iconSvg.appendChild(circle);
+                iconSvg.appendChild(path);
+                
                 const statusText = document.createElement('span');
                 statusText.className = 'status-text';
                 statusText.textContent = text;
+                statusContainer.appendChild(iconSvg);
                 statusContainer.appendChild(statusText);
                 statusWrapper.appendChild(label);
                 statusWrapper.appendChild(statusContainer);
@@ -3227,10 +3352,11 @@
                 for (const tabId of activeTab.referencedTabs) {
                     const tab = this.tabs.find(t => t.id === tabId);
                     if (tab) {
+                        const friendlyTitle = this.getFriendlyTabTitle(tab);
                         const pill = document.createElement('div');
                         pill.className = 'context-pill';
                         pill.innerHTML = `
-                            <span class="context-pill-title" title="${this.escapeHtml(tab.title)}">${this.escapeHtml(tab.title)}</span>
+                            <span class="context-pill-title" title="${this.escapeHtml(friendlyTitle)}">${this.escapeHtml(friendlyTitle)}</span>
                             <button class="context-pill-remove" data-tab-id="${tab.id}">&times;</button>
                         `;
                         this.contextPillsContainer.appendChild(pill);

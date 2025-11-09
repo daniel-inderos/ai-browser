@@ -22,6 +22,8 @@ let mainWindow;
 let quitConfirmed = false;
 let isTerminalSignal = false;
 let externalQuitRequested = false;
+// Track active chat requests by request ID and their abort controllers
+const activeChatRequests = new Map();
 
 const handleExternalExitSignal = (source) => {
   console.log(`${source} received in main process, exiting without confirmation`);
@@ -368,6 +370,36 @@ ipcMain.handle('navigate-to', async (event, url) => {
 });
 
 ipcMain.handle('chat-send', async (event, { id, messages, contexts, webSearchOptions }) => {
+  const webContentsId = event.sender.id;
+  const requestKey = `${webContentsId}-${id}`;
+  let isCancelled = false;
+  
+  // Track this request
+  activeChatRequests.set(requestKey, {
+    webContentsId,
+    requestId: id,
+    cancelled: false
+  });
+  
+  // Check if webContents is still alive before processing
+  const checkCancelled = () => {
+    const request = activeChatRequests.get(requestKey);
+    if (!request || request.cancelled) {
+      return true;
+    }
+    // Check if webContents is still alive
+    try {
+      if (event.sender.isDestroyed()) {
+        request.cancelled = true;
+        return true;
+      }
+    } catch (e) {
+      request.cancelled = true;
+      return true;
+    }
+    return false;
+  };
+  
   try {
     let finalMessages = messages;
     if (contexts && contexts.length > 0) {
@@ -392,36 +424,86 @@ ipcMain.handle('chat-send', async (event, { id, messages, contexts, webSearchOpt
     let citations = [];
     
     for await (const chunk of streamChat(finalMessages, options)) {
+      // Check if cancelled before processing each chunk
+      if (checkCancelled()) {
+        console.log(`Chat request ${id} cancelled for webContents ${webContentsId}`);
+        break;
+      }
+      
       // Handle metadata objects (sources, citations)
       if (typeof chunk === 'object' && chunk.type === 'metadata') {
         if (chunk.sources) {
           sources = chunk.sources;
-          event.sender.send('chat-stream', { id, metadata: { sources } });
+          if (!checkCancelled()) {
+            event.sender.send('chat-stream', { id, metadata: { sources } });
+          }
         }
         if (chunk.citations) {
           citations = chunk.citations;
-          event.sender.send('chat-stream', { id, metadata: { citations } });
+          if (!checkCancelled()) {
+            event.sender.send('chat-stream', { id, metadata: { citations } });
+          }
         }
       } else if (typeof chunk === 'string') {
         // Regular text token
         assistantMessage += chunk;
-        event.sender.send('chat-stream', { id, token: chunk });
+        if (!checkCancelled()) {
+          event.sender.send('chat-stream', { id, token: chunk });
+        }
       }
     }
     
-    // Send final done signal with any collected metadata
-    event.sender.send('chat-stream', { 
-      id, 
-      done: true,
-      ...(sources.length > 0 && { sources }),
-      ...(citations.length > 0 && { citations })
-    });
+    // Only send done signal if not cancelled
+    if (!checkCancelled()) {
+      event.sender.send('chat-stream', { 
+        id, 
+        done: true,
+        ...(sources.length > 0 && { sources }),
+        ...(citations.length > 0 && { citations })
+      });
+    }
+    
+    // Clean up
+    activeChatRequests.delete(requestKey);
     return { success: true };
   } catch (error) {
-    console.error('Chat error', error);
-    event.sender.send('chat-stream', { id, error: error.message });
+    // Only send error if not cancelled
+    if (!checkCancelled()) {
+      console.error('Chat error', error);
+      event.sender.send('chat-stream', { id, error: error.message });
+    }
+    // Clean up
+    activeChatRequests.delete(requestKey);
     return { success: false, error: error.message };
   }
+});
+
+// Cancel chat request handler
+ipcMain.handle('chat-cancel', async (event, { id }) => {
+  const webContentsId = event.sender.id;
+  const requestKey = `${webContentsId}-${id}`;
+  const request = activeChatRequests.get(requestKey);
+  if (request) {
+    request.cancelled = true;
+    activeChatRequests.delete(requestKey);
+    console.log(`Chat request ${id} cancelled explicitly for webContents ${webContentsId}`);
+  }
+  return { success: true };
+});
+
+// Clean up requests when webContents is destroyed
+app.on('web-contents-created', (event, webContents) => {
+  webContents.on('destroyed', () => {
+    const webContentsId = webContents.id;
+    // Cancel all requests for this webContents
+    for (const [key, request] of activeChatRequests.entries()) {
+      if (request.webContentsId === webContentsId) {
+        request.cancelled = true;
+        activeChatRequests.delete(key);
+        console.log(`Cancelled chat request ${request.requestId} for destroyed webContents ${webContentsId}`);
+      }
+    }
+  });
 });
 
 // History IPC handlers

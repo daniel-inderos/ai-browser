@@ -92,7 +92,16 @@
         .user-msg .bubble { background: transparent; }
         .assistant-msg .bubble { background: transparent; }
         .chat-label { display:none; }
-        .chat-content { line-height: var(--line-height-relaxed); font-size: var(--font-size-sm); }
+        .chat-content { line-height: 1.3; font-size: var(--font-size-sm); }
+        .chat-content p { margin: 0; }
+        .chat-content p:not(:last-child) { margin-bottom: 0.3rem; }
+        .chat-content ul:not(:last-child),
+        .chat-content ol:not(:last-child),
+        .chat-content blockquote:not(:last-child),
+        .chat-content pre:not(:last-child) { margin-bottom: 0.4rem; }
+        .chat-content ul, .chat-content ol { margin: 0; padding-top: 0; padding-bottom: 0; }
+        .chat-content li { margin: 0; line-height: 1.3; padding: 0; }
+        .chat-content ul ul, .chat-content ol ol, .chat-content ul ol, .chat-content ol ul { margin: 0; }
         .chat-content pre { background: var(--color-background-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-3); overflow-x:auto; font-family: var(--font-family-mono); font-size: 12px; position: relative; }
         .copy-code { position:absolute; top:8px; right:8px; font-size: 11px; padding: 4px 8px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary); cursor: pointer; }
         .copy-code:hover { background: var(--color-surface-hover); }
@@ -201,7 +210,6 @@
                                 </button>
                             </div>
                         </form>
-                        <div class="empty-hint">Tip: type @ to reference any open tab</div>
                     </div>
                 </div>
             </div>
@@ -390,6 +398,10 @@
                 if (window.electronAPI && window.electronAPI.onFromHost) {
                     window.electronAPI.onFromHost((data) => this.handleHostMessage({ data }));
                 }
+                // Cancel any active requests when page is unloading (tab closing)
+                window.addEventListener('beforeunload', () => {
+                    this.stopStreaming();
+                });
             }
             
             handleHostMessage({ data }) {
@@ -547,7 +559,7 @@
                     const citationsHtml = msg.role === 'assistant' && msg.metadata ? this.renderCitationsHtml(msg.metadata) : '';
                     return `
                         <div class="chat-msg ${msg.role}-msg">
-                            <div class="avatar">${avatar.substring(0,2)}</div>
+                            <div class="avatar">${avatar}</div>
                             <div class="bubble">
                                 <div class="chat-content">${content}</div>
                                 ${citationsHtml}
@@ -643,15 +655,62 @@
                     : availableTabs;
 
                 if (filtered.length > 0) {
-                    this.elements.tabSuggestions.innerHTML = filtered.map(tab => `
-                        <div class="suggestion-item" data-tab-id="${tab.id}" data-tab-title="${this.escapeHtml(tab.title)}">
-                            <div class="suggestion-title">${this.escapeHtml(tab.title)}</div>
+                    this.elements.tabSuggestions.innerHTML = filtered.map(tab => {
+                        const displayTitle = this.getTabLabel(tab);
+                        return `
+                        <div class="suggestion-item" data-tab-id="${tab.id}" data-tab-title="${this.escapeHtml(displayTitle)}">
+                            <div class="suggestion-title">${this.escapeHtml(displayTitle)}</div>
                             <div class="suggestion-url">${this.escapeHtml(tab.url)}</div>
-                        </div>`).join('');
+                        </div>`;
+                    }).join('');
                     this.elements.tabSuggestions.style.display = 'block';
                 } else {
                     this.hideTabSuggestions();
                 }
+            }
+
+            getTabLabel(tab) {
+                if (!tab) {
+                    return 'Untitled tab';
+                }
+
+                const title = (tab.title || '').trim();
+                const url = tab.url || '';
+
+                if (url.includes('newtab.html')) {
+                    return 'AI Chat';
+                }
+                if (url.includes('history.html')) {
+                    return 'History';
+                }
+                if (url.includes('settings.html')) {
+                    return 'Settings';
+                }
+
+                if (title && !title.startsWith('file://')) {
+                    return title;
+                }
+
+                if (url) {
+                    try {
+                        const parsed = new URL(url);
+                        if (parsed.protocol === 'file:') {
+                            const segments = parsed.pathname.split('/').filter(Boolean);
+                            const fileName = segments.pop();
+                            if (fileName) {
+                                return fileName;
+                            }
+                        }
+                    } catch (err) {
+                        // ignore parsing errors
+                    }
+                }
+
+                if (title) {
+                    return title;
+                }
+
+                return url || 'Untitled tab';
             }
             
             handleSuggestionClick(e) {
@@ -676,8 +735,9 @@
                     const tab = this.allTabs.find(t => t.id === tabId);
                     const pill = document.createElement('div');
                     pill.className = 'context-pill';
+                    const displayTitle = this.getTabLabel(tab);
                     pill.innerHTML = `
-                        <span class="context-pill-title" title="${this.escapeHtml(tab ? tab.title : tabId)}">${this.escapeHtml(tab ? tab.title : tabId)}</span>
+                        <span class="context-pill-title" title="${this.escapeHtml(displayTitle)}">${this.escapeHtml(displayTitle)}</span>
                         <button class="context-pill-remove" data-tab-id="${tabId}">&times;</button>`;
                     pill.querySelector('.context-pill-remove').addEventListener('click', () => {
                         this.referencedTabs.delete(tabId);
@@ -703,9 +763,31 @@
                 bubble.className = 'bubble';
                 const statusContainer = document.createElement('div');
                 statusContainer.className = 'chat-status-indicator';
+                
+                // Add search icon
+                const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                iconSvg.setAttribute('width', '16');
+                iconSvg.setAttribute('height', '16');
+                iconSvg.setAttribute('viewBox', '0 0 24 24');
+                iconSvg.setAttribute('fill', 'none');
+                iconSvg.setAttribute('stroke', 'currentColor');
+                iconSvg.setAttribute('stroke-width', '2');
+                iconSvg.setAttribute('stroke-linecap', 'round');
+                iconSvg.setAttribute('stroke-linejoin', 'round');
+                iconSvg.classList.add('chat-status-indicator-icon');
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', '11');
+                circle.setAttribute('cy', '11');
+                circle.setAttribute('r', '8');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'm21 21-4.35-4.35');
+                iconSvg.appendChild(circle);
+                iconSvg.appendChild(path);
+                
                 const statusText = document.createElement('span');
                 statusText.className = 'status-text';
                 statusText.textContent = text;
+                statusContainer.appendChild(iconSvg);
                 statusContainer.appendChild(statusText);
                 bubble.appendChild(statusContainer);
                 statusWrapper.appendChild(avatar);
@@ -931,9 +1013,16 @@
             }
 
             stopStreaming() {
-                // Best-effort: stop updating UI for current stream
+                // Cancel the active request
+                if (this.currentStream && this.currentStream.id) {
+                    if (window.electronAPI && window.electronAPI.cancelChat) {
+                        window.electronAPI.cancelChat(this.currentStream.id);
+                    }
+                }
+                // Stop updating UI for current stream
                 this.currentStream = null;
                 this.toggleStreamingUI(false);
+                this.hideStatusIndicator();
             }
 
             decorateCodeBlocks(wrapper) {
