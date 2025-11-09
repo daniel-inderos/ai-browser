@@ -202,7 +202,7 @@
                 this.saveTabsTimeout = null; // For debouncing tab saves
                 this.sidebarConstraints = {
                     tabRail: { min: 200, max: 420, default: 260 },
-                    chatSidebar: { min: 260, max: 560, default: 320 }
+                    chatSidebar: { min: 260, max: 560, default: 380 }
                 };
                 this.activeResize = null;
                 this.resizeAnimationFrame = null;
@@ -3183,8 +3183,11 @@
             renderCitations(msgContainer, metadata) {
                 if (!metadata || !msgContainer) return;
                 
+                // Prefer to render citations inside the message body to avoid breaking the flex row layout
+                const hostElement = msgContainer.querySelector('.chat-content') || msgContainer;
+                
                 // Remove existing citations container if present
-                const existingCitations = msgContainer.querySelector('.chat-citations');
+                const existingCitations = hostElement.querySelector('.chat-citations');
                 if (existingCitations) {
                     existingCitations.remove();
                 }
@@ -3256,7 +3259,7 @@
                 }
                 
                 if (citationsContainer.children.length > 0) {
-                    msgContainer.appendChild(citationsContainer);
+                    hostElement.appendChild(citationsContainer);
                 }
             }
 
