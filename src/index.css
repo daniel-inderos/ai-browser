@@ -82,7 +82,7 @@
     --nav-bar-height: 52px;
     --content-padding: var(--spacing-4);
     --tab-rail-width: 260px;
-    --chat-sidebar-width: 320px;
+    --chat-sidebar-width: 380px;
     --rail-header-height: 28px;
     --page-edge-gap: calc(var(--spacing-2) + 0.05rem);
     --hover-trigger-width: 20px;
@@ -1188,6 +1188,21 @@ webview {
     box-shadow: var(--shadow-lg);
 }
 
+/* Sidebar chat layout should use full width */
+.browser-container .chat-history .assistant-msg {
+    width: 100%;
+    max-width: 100%;
+}
+
+.browser-container .chat-history .assistant-msg .chat-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.browser-container .chat-history .user-msg {
+    max-width: 100%;
+}
+
 /* Chat history */
 .chat-history {
     flex: 1;
@@ -1676,7 +1691,7 @@ webview {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .citation-item:hover,
