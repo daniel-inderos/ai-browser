@@ -1013,7 +1013,7 @@ webview {
     z-index: 10000;
     opacity: 0;
     transform: translateY(-10px);
-    transition: all var(--transition-normal);
+    transition: opacity var(--transition-normal), transform var(--transition-normal);
     pointer-events: none;
     max-width: 300px;
     word-wrap: break-word;
