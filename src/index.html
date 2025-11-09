@@ -2827,15 +2827,15 @@
             
                 // Generate unique request ID and send to main process
                 const reqId = Date.now().toString();
-                // Enable web search for ask section (sidebar chat)
+                // Disable web search for the sidebar chat so it relies on current-page context
                 const webSearchOptions = {
-                    enableWebSearch: true,
+                    enableWebSearch: false,
                     model: 'gpt-5',
-                    externalWebAccess: true
+                    externalWebAccess: false
                 };
                 
-                // Show status indicator in chat history - start with "Searching the web..." since web search is enabled
-                this.showStatusIndicator('Searching the web...');
+                // Show status indicator in chat history to reflect on-device/page processing
+                this.showStatusIndicator('Analyzing this page...');
                 
                 window.electronAPI.sendChat(reqId, session, contexts, webSearchOptions); // Send all messages (no assistant placeholder yet)
             
