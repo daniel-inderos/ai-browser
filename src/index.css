@@ -84,6 +84,10 @@
     --tab-rail-width: 260px;
     --chat-sidebar-width: 320px;
     --rail-header-height: 28px;
+    --page-edge-gap: calc(var(--spacing-2) + 0.05rem);
+    --hover-trigger-width: 20px;
+    --page-corner-radius-outer: calc(var(--radius-lg) + 0.35rem);
+    --page-corner-radius-inner: calc(var(--page-corner-radius-outer) - 0.4rem);
 }
 
 /* Dark Theme */
@@ -189,9 +193,11 @@ textarea:focus {
     box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
-    z-index: 12;
+    z-index: 18;
     overflow: visible;
-    transition: width 150ms ease-in-out, transform 150ms ease-in-out;
+    transform: translate3d(0, 0, 0);
+    will-change: transform, opacity;
+    transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms ease, box-shadow 200ms ease;
 }
 
 /* Disable transitions during resize for smooth dragging */
@@ -202,13 +208,33 @@ textarea:focus {
 }
 
 .tab-rail.collapsed {
-    width: 0;
-    overflow: hidden;
     border-right: none;
+    box-shadow: none;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(calc(-1 * var(--tab-rail-width) - var(--spacing-3)), 0, 0);
 }
 
 .tab-rail.collapsed .tab-rail-header {
     display: none; /* Hide header completely when collapsed */
+    padding-left: var(--spacing-3); /* Remove traffic light spacing when collapsed */
+}
+
+.tab-rail.overlay-visible {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    z-index: 32;
+    box-shadow: var(--shadow-lg);
+}
+
+.tab-rail.collapsed.overlay-visible {
+    border-right: 1px solid var(--color-border);
+}
+
+.tab-rail.collapsed.overlay-visible .tab-rail-header {
+    display: flex;
+    padding-left: 76px;
 }
 
 /* Hover trigger zone for collapsed sidebar */
@@ -217,7 +243,7 @@ textarea:focus {
     top: 0;
     left: 0;
     bottom: 0;
-    width: 10px;
+    width: var(--hover-trigger-width);
     z-index: 11;
     background: transparent;
     cursor: pointer;
@@ -272,10 +298,6 @@ textarea:focus {
     -webkit-backdrop-filter: blur(8px);
     background: transparent; /* Fully transparent titlebar */
     -webkit-app-region: drag; /* Make header draggable on macOS */
-}
-
-.tab-rail.collapsed .tab-rail-header {
-    padding-left: var(--spacing-3); /* Remove traffic light spacing when collapsed */
 }
 
 /* Incognito Indicator */
@@ -531,19 +553,19 @@ textarea:focus {
 
 /* Layout rules for content area - merged with main definition below */
 .browser-container:has(.tab-rail.collapsed) .content-area {
-    margin-left: var(--spacing-2);
-    width: calc(100% - var(--spacing-2) - var(--spacing-2));
+    margin-left: var(--page-edge-gap);
+    width: calc(100% - var(--page-edge-gap) - var(--page-edge-gap));
 }
 
 /* Content area when chat sidebar is open */
 .browser-container:has(.chat-sidebar.open) .content-area {
-    width: calc(100% - var(--tab-rail-width) - var(--chat-sidebar-width) - var(--spacing-2) - var(--spacing-2));
+    width: calc(100% - var(--tab-rail-width) - var(--chat-sidebar-width) - var(--page-edge-gap) - var(--page-edge-gap));
 }
 
 /* Content area when left sidebar is collapsed AND chat sidebar is open */
 .browser-container:has(.tab-rail.collapsed):has(.chat-sidebar.open) .content-area {
-    margin-left: var(--spacing-2);
-    width: calc(100% - var(--chat-sidebar-width) - var(--spacing-2) - var(--spacing-2));
+    margin-left: var(--page-edge-gap);
+    width: calc(100% - var(--chat-sidebar-width) - var(--page-edge-gap) - var(--page-edge-gap));
 }
 
 /* Tab Bar Styles */
@@ -810,12 +832,12 @@ textarea:focus {
     position: relative;
     background: var(--color-background);
     overflow: hidden;
-    border-radius: var(--radius-lg);
+    border-radius: var(--page-corner-radius-outer);
     /* Consistent padding on all sides */
-    margin: var(--spacing-2);
-    margin-left: calc(var(--spacing-2) + var(--tab-rail-width));
+    margin: var(--page-edge-gap);
+    margin-left: calc(var(--page-edge-gap) + var(--tab-rail-width));
     /* Width reduced by rail + horizontal margins */
-    width: calc(100% - var(--tab-rail-width) - var(--spacing-2) - var(--spacing-2));
+    width: calc(100% - var(--tab-rail-width) - var(--page-edge-gap) - var(--page-edge-gap));
     box-shadow: var(--shadow-lg);
 }
 
@@ -823,7 +845,7 @@ webview {
     width: 100%;
     height: 100%;
     border: none;
-    border-radius: var(--radius-lg);
+    border-radius: var(--page-corner-radius-inner);
     background: var(--color-surface);
     -webkit-app-region: no-drag; /* Webview content shouldn't be draggable */
 }
@@ -833,7 +855,7 @@ webview {
     height: 100%;
     position: relative;
     overflow: hidden;
-    border-radius: var(--radius-lg);
+    border-radius: var(--page-corner-radius-inner);
 }
 
 /* Loading and Error States */

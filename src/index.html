@@ -575,23 +575,37 @@
                 // Setup hover behavior for collapsed sidebar
                 if (this.hoverTriggerZone && this.tabRail) {
                     let collapseTimeout = null;
+
+                    const showHoverSidebar = () => {
+                        if (!this.sidebarCollapsed) return;
+                        this.tabRail.classList.add('overlay-visible');
+                        this.updateFocusModeVisualState(true);
+                    };
+
+                    const hideHoverSidebar = () => {
+                        if (!this.sidebarCollapsed) return;
+                        if (collapseTimeout) {
+                            clearTimeout(collapseTimeout);
+                            collapseTimeout = null;
+                        }
+                        this.tabRail.classList.remove('overlay-visible');
+                        this.updateFocusModeVisualState();
+                    };
                     
                     this.hoverTriggerZone.addEventListener('mouseenter', () => {
                         if (this.sidebarCollapsed) {
                             this.sidebarHoveredWhileCollapsed = true;
-                            this.tabRail.classList.remove('collapsed');
-                            this.updateFocusModeVisualState(true);
+                            showHoverSidebar();
                         }
                     });
 
                     this.tabRail.addEventListener('mouseleave', () => {
                         if (this.sidebarCollapsed && this.sidebarHoveredWhileCollapsed) {
-                            // Add a small delay before collapsing to prevent flickering
+                            // Add a small delay before hiding to prevent flickering
                             collapseTimeout = setTimeout(() => {
                                 this.sidebarHoveredWhileCollapsed = false;
-                                this.tabRail.classList.add('collapsed');
-                                this.updateFocusModeVisualState();
-                            }, 150);
+                                hideHoverSidebar();
+                            }, 180);
                         }
                     });
 
@@ -813,10 +827,16 @@
                 
                 if (this.sidebarCollapsed) {
                     this.tabRail.classList.add('collapsed');
-                    this.hoverTriggerZone.classList.add('active');
+                    this.tabRail.classList.remove('overlay-visible');
+                    if (this.hoverTriggerZone) {
+                        this.hoverTriggerZone.classList.add('active');
+                    }
                 } else {
                     this.tabRail.classList.remove('collapsed');
-                    this.hoverTriggerZone.classList.remove('active');
+                    this.tabRail.classList.remove('overlay-visible');
+                    if (this.hoverTriggerZone) {
+                        this.hoverTriggerZone.classList.remove('active');
+                    }
                     this.sidebarHoveredWhileCollapsed = false;
                 }
                 
