@@ -223,13 +223,7 @@
                 this.chatSessions = new Map();
                 this.marked = window.marked;
                 
-                // Ensure chat and summarize buttons are visible by default
-                if (this.chatBtn) {
-                    this.chatBtn.style.display = 'flex';
-                }
-                if (this.summarizeBtn) {
-                    this.summarizeBtn.style.display = 'flex';
-                }
+                this.updateActionButtonsVisibility();
                 
                 // Initialize partition and incognito mode before creating initial tab
                 this.initializePartition()
@@ -362,6 +356,21 @@
                 }
 
                 return url || 'Untitled tab';
+            }
+
+            isAIChatUrl(url) {
+                return typeof url === 'string' && url.includes('newtab.html');
+            }
+
+            updateActionButtonsVisibility(url = '') {
+                const shouldHide = this.isAIChatUrl(url);
+                const displayValue = shouldHide ? 'none' : 'flex';
+                if (this.chatBtn) {
+                    this.chatBtn.style.display = displayValue;
+                }
+                if (this.summarizeBtn) {
+                    this.summarizeBtn.style.display = displayValue;
+                }
             }
 
             injectLinkHandlerScript(webview) {
@@ -1493,13 +1502,7 @@
                         if (this.activeTabId === tabId) {
                             this.urlBar.value = this.getDisplayUrl(webview.getURL());
                             this.hideLoading();
-                            // Always show chat and summarize buttons
-                            if (this.chatBtn) {
-                                this.chatBtn.style.display = 'flex';
-                            }
-                            if (this.summarizeBtn) {
-                                this.summarizeBtn.style.display = 'flex';
-                            }
+                            this.updateActionButtonsVisibility(webview.getURL());
                         }
                         
                         // Inject link handler script when DOM is ready
@@ -1560,6 +1563,9 @@
                                 tab.url = `${newtabPath}?mode=ask&chatId=${arg.chatId}`;
                                 // Save tabs with the updated URL
                                 this.saveTabsDebounced();
+                                if (this.activeTabId === tab.id) {
+                                    this.updateActionButtonsVisibility(tab.url);
+                                }
                             }
                             // Ensure AI icon is set for newtab
                             if (tab.url && tab.url.includes('newtab.html')) {
@@ -1635,6 +1641,7 @@
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = this.getDisplayUrl(e.url);
                         this.updateNavBarVisibility(e.url);
+                        this.updateActionButtonsVisibility(e.url);
                     }
                     // Save tabs after navigation (debounced)
                     this.saveTabsDebounced();
@@ -1648,6 +1655,7 @@
                     if (this.activeTabId === tabId) {
                         this.urlBar.value = this.getDisplayUrl(e.url);
                         this.updateNavBarVisibility(e.url);
+                        this.updateActionButtonsVisibility(e.url);
                     }
                     // Save tabs after in-page navigation (debounced)
                     this.saveTabsDebounced();
@@ -2364,14 +2372,7 @@
                     this.activeTabId = tabId;
                     this.urlBar.value = this.getDisplayUrl(tab.url);
                     this.updateNavBarVisibility(tab.url);
-
-                    // Always show chat and summarize buttons
-                    if (this.chatBtn) {
-                        this.chatBtn.style.display = 'flex';
-                    }
-                    if (this.summarizeBtn) {
-                        this.summarizeBtn.style.display = 'flex';
-                    }
+                    this.updateActionButtonsVisibility(tab.url);
 
                     // Restore chat sidebar state for this tab
                     if (tab.chatSidebarOpen) {
@@ -2490,6 +2491,7 @@
                 if (this.activeTabId === tab.id) {
                     this.urlBar.value = this.getDisplayUrl(targetUrl);
                     this.updateNavBarVisibility(targetUrl);
+                    this.updateActionButtonsVisibility(targetUrl);
                 }
 
                 this.saveTabsDebounced();
@@ -2729,6 +2731,7 @@
                     if (tab) {
                         tab.webview.loadURL(result.url);
                         tab.url = result.url;
+                        this.updateActionButtonsVisibility(result.url);
                         // Save tabs after navigation (debounced)
                         this.saveTabsDebounced();
                     }
