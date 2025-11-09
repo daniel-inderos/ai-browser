@@ -1171,6 +1171,8 @@ webview {
     flex: 1;
     overflow-y: auto;
     padding: var(--spacing-4);
+    display: flex;
+    flex-direction: column;
 }
 
 /* Context Pills */
@@ -1242,6 +1244,38 @@ webview {
     position: relative;
 }
 
+.send-area {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.chat-stop-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--spacing-3);
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-elevated);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.chat-stop-btn:hover {
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+}
+
+.chat-stop-btn,
+.chat-send-btn {
+    height: 44px;
+}
+
 .chat-clear-btn {
     background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
@@ -1262,7 +1296,7 @@ webview {
 
 .chat-input {
     flex: 1;
-    padding: var(--spacing-3) var(--spacing-4);
+    padding: var(--spacing-2) var(--spacing-4);
     background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-full);
@@ -1270,6 +1304,9 @@ webview {
     color: var(--color-text-primary);
     outline: none;
     transition: all var(--transition-fast);
+    min-height: 44px;
+    line-height: 1.4;
+    box-sizing: border-box;
 }
 
 .chat-input:focus {
@@ -1324,8 +1361,8 @@ webview {
     color: var(--color-text-inverse);
     border: none;
     border-radius: var(--radius-full);
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1345,6 +1382,19 @@ webview {
     box-shadow: var(--shadow-sm);
 }
 
+.chat-send-btn:disabled {
+    background: var(--color-surface-elevated);
+    color: var(--color-text-tertiary);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+    opacity: 0.8;
+}
+
+.chat-send-btn:disabled svg {
+    stroke: currentColor;
+}
+
 /* Chat messages */
 .chat-msg {
     margin-bottom: var(--spacing-3);
@@ -1354,16 +1404,31 @@ webview {
 .user-msg {
     text-align: right;
     color: var(--color-text-primary);
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+    align-self: flex-end;
+    margin-left: auto;
+    max-width: 80%;
 }
 .assistant-msg {
     text-align: left;
     color: var(--color-text-secondary);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+    max-width: 80%;
 }
 
 .chat-label {
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-bold);
     margin-bottom: var(--spacing-1);
+    flex-shrink: 0;
+}
+.user-msg .chat-label {
+    margin-bottom: 0;
 }
 .chat-content {
     white-space: pre-wrap;
@@ -1417,9 +1482,9 @@ webview {
 /* ==================== Chat Status Indicator ==================== */
 
 .chat-status-indicator {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     padding: var(--spacing-2) var(--spacing-3);
     background: var(--color-background-secondary);
     border-radius: var(--radius-md);
@@ -1427,6 +1492,9 @@ webview {
     color: var(--color-text-secondary);
     gap: var(--spacing-2);
     animation: pulse 2s ease-in-out infinite;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .chat-status-indicator::before {
@@ -1755,6 +1823,50 @@ webview {
 .command-palette-result-item:hover .command-palette-result-action {
     background: var(--color-surface);
     border-color: var(--color-border-hover);
+}
+
+.command-palette-response {
+    max-height: 400px;
+    overflow-y: auto;
+    border-top: 1px solid var(--color-border);
+    padding: var(--spacing-4);
+}
+
+.command-palette-response-content {
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+    color: var(--color-text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.command-palette-response-content p {
+    margin-bottom: var(--spacing-3);
+}
+
+.command-palette-response-content p:last-child {
+    margin-bottom: 0;
+}
+
+.command-palette-response-content code {
+    background: var(--color-surface);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+.command-palette-response-content pre {
+    background: var(--color-surface);
+    padding: var(--spacing-3);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin-bottom: var(--spacing-3);
+}
+
+.command-palette-response-content pre code {
+    background: none;
+    padding: 0;
 }
 
 

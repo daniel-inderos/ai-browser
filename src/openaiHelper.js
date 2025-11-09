@@ -88,137 +88,135 @@ async function* streamChatWithWebSearch(messages, options = {}) {
     })
   };
   
-    try {
-      // Try to use Responses API with streaming if supported
-      // Include sources by default unless explicitly disabled
-      const includeParams = options.include || ['web_search_call.action.sources'];
-      
-      // Force web search by setting tool_choice to "required" unless explicitly overridden
-      const toolChoice = options.toolChoice || 'required';
-      
-      // Check if Responses API supports streaming
-      // If not, we'll fall back to Chat Completions API with web search models
-      try {
-        // Try Responses API with stream parameter
-        const responseStream = await openai.responses.create({
-          model: options.model || 'gpt-5',
-          tools: [webSearchConfig],
-          input: input,
-          include: includeParams,
-          tool_choice: toolChoice,
-          stream: true, // Try streaming
-          ...(options.reasoning && { reasoning: options.reasoning }),
-        });
-        
-        // If streaming works, process the stream
-        let sources = [];
-        let citations = [];
-        let hasReceivedSources = false;
-        
-        for await (const chunk of responseStream) {
-          // Handle different chunk types
-          if (chunk.type === 'web_search_call' && chunk.action) {
-            // Extract sources from web search call
-            if (chunk.action.sources && Array.isArray(chunk.action.sources)) {
-              chunk.action.sources.forEach(source => {
-                if (typeof source === 'string') {
-                  sources.push(source);
-                } else if (source && source.url) {
-                  sources.push(source.url);
-                }
-              });
-              if (!hasReceivedSources && sources.length > 0) {
-                yield { type: 'metadata', sources };
-                hasReceivedSources = true;
-              }
-            }
-          } else if (chunk.type === 'message' && chunk.content) {
-            // Stream message content
-            for (const contentItem of chunk.content) {
-              if (contentItem.type === 'output_text' && contentItem.text) {
-                yield contentItem.text;
-              }
-              // Extract citations
-              if (contentItem.annotations) {
-                const chunkCitations = contentItem.annotations.filter(ann => ann.type === 'url_citation');
-                if (chunkCitations.length > 0) {
-                  citations.push(...chunkCitations);
-                }
-              }
-            }
+  try {
+    const includeParams = Array.isArray(options.include) ? options.include : undefined;
+    const toolChoice = options.toolChoice || 'required';
+
+    const stream = await openai.responses.create({
+      model: options.model || 'gpt-5',
+      tools: [webSearchConfig],
+      input,
+      include: includeParams,
+      tool_choice: toolChoice,
+      stream: true,
+      ...(options.reasoning && { reasoning: options.reasoning }),
+    });
+
+    const collectedSources = new Set();
+    const collectedCitations = new Map();
+    let completedResponse = null;
+
+    const trackAnnotation = (annotation) => {
+      if (!annotation || typeof annotation !== 'object') return;
+      if (annotation.type === 'url_citation' && annotation.url) {
+        collectedSources.add(annotation.url);
+        if (!collectedCitations.has(annotation.url)) {
+          collectedCitations.set(annotation.url, {
+            url: annotation.url,
+            title: annotation.title || annotation.url,
+          });
+        }
+      }
+    };
+
+    for await (const event of stream) {
+      if (!event || !event.type) {
+        continue;
+      }
+
+      switch (event.type) {
+        case 'response.output_text.delta': {
+          const token = event.delta || '';
+          if (token) {
+            yield token;
           }
+          break;
         }
-        
-        // Yield final citations if available
-        if (citations.length > 0) {
-          yield { type: 'metadata', citations };
-        }
-        
-        return; // Successfully streamed
-      } catch (streamError) {
-        // If streaming fails, fall back to non-streaming Responses API
-        console.log('Streaming not supported, using non-streaming Responses API');
-      }
-      
-      // Fallback: Use non-streaming Responses API (original implementation)
-      const response = await openai.responses.create({
-        model: options.model || 'gpt-5',
-        tools: [webSearchConfig],
-        input: input,
-        include: includeParams,
-        tool_choice: toolChoice,
-        ...(options.reasoning && { reasoning: options.reasoning }),
-      });
-    
-      // Extract sources if available
-      const sources = [];
-      if (response.output_items) {
-        for (const item of response.output_items) {
-          if (item.type === 'web_search_call' && item.action) {
-            // Handle sources from action.sources
-            if (item.action.sources && Array.isArray(item.action.sources)) {
-              item.action.sources.forEach(source => {
-                // Sources can be strings or objects with url property
-                if (typeof source === 'string') {
-                  sources.push(source);
-                } else if (source && source.url) {
-                  sources.push(source.url);
-                }
-              });
-            }
+        case 'response.refusal.delta': {
+          const token = event.delta || '';
+          if (token) {
+            yield token;
           }
+          break;
         }
-      }
-      
-      // Stream the output text
-      const outputText = response.output_text || '';
-      
-      // If we have sources, include them in metadata
-      if (sources.length > 0) {
-        // Yield sources as metadata first (we'll handle this in the IPC layer)
-        yield { type: 'metadata', sources };
-      }
-      
-      // Stream the text character by character or in chunks for better UX
-      const chunkSize = 10; // Characters per chunk for smoother streaming
-      for (let i = 0; i < outputText.length; i += chunkSize) {
-        yield outputText.slice(i, i + chunkSize);
-      }
-      
-      // Yield citations if available
-      if (response.output_items) {
-        const messageItem = response.output_items.find(item => item.type === 'message');
-        if (messageItem && messageItem.content && messageItem.content[0] && messageItem.content[0].annotations) {
-          const citations = messageItem.content[0].annotations.filter(ann => ann.type === 'url_citation');
-          if (citations.length > 0) {
-            yield { type: 'metadata', citations };
-          }
+        case 'response.output_text.annotation.added': {
+          trackAnnotation(event.annotation);
+          break;
         }
+        case 'response.completed': {
+          completedResponse = event.response;
+          break;
+        }
+        case 'response.error': {
+          const message = event.error?.message || 'OpenAI response stream error';
+          throw new Error(message);
+        }
+        default:
+          break;
       }
-    } catch (error) {
-      console.error('Web search error:', error);
-      throw error;
     }
+
+    if (completedResponse) {
+      const { sources, citations } = extractResponseMetadata(completedResponse);
+      sources.forEach((url) => collectedSources.add(url));
+      citations.forEach((citation) => {
+        if (citation.url && !collectedCitations.has(citation.url)) {
+          collectedCitations.set(citation.url, citation);
+        }
+      });
+    }
+
+    if (collectedSources.size > 0) {
+      yield { type: 'metadata', sources: Array.from(collectedSources) };
+    }
+    if (collectedCitations.size > 0) {
+      yield { type: 'metadata', citations: Array.from(collectedCitations.values()) };
+    }
+  } catch (error) {
+    console.error('Web search error:', error);
+    throw error;
+  }
+}
+
+function extractResponseMetadata(response) {
+  const sources = new Set();
+  const citations = new Map();
+
+  if (!response || !Array.isArray(response.output)) {
+    return {
+      sources: [],
+      citations: [],
+    };
+  }
+
+  for (const output of response.output) {
+    if (!output || output.type !== 'message' || !Array.isArray(output.content)) {
+      continue;
+    }
+
+    for (const content of output.content) {
+      if (!content || content.type !== 'output_text' || !Array.isArray(content.annotations)) {
+        continue;
+      }
+
+      for (const annotation of content.annotations) {
+        if (annotation?.type === 'url_citation' && annotation.url) {
+          sources.add(annotation.url);
+          if (!citations.has(annotation.url)) {
+            citations.set(annotation.url, {
+              url: annotation.url,
+              title: annotation.title || annotation.url,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    sources: Array.from(sources),
+    citations: Array.from(citations.values()),
+  };
 }
 
 module.exports = { streamChat };
