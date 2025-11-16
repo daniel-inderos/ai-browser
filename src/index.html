@@ -308,7 +308,13 @@
                 this.createTab('settings.html');
             }
             
-            getDisplayUrl(url) {
+            getDisplayUrl(url, tab = null) {
+                const targetTab = tab || this.tabs.find(t => t.id === this.activeTabId);
+                if (targetTab && targetTab.url && targetTab.url.includes('newtab.html')) {
+                    // For AI chat tabs, show the chat title instead of the file URL
+                    const friendlyTitle = this.getFriendlyTabTitle(targetTab);
+                    return friendlyTitle || 'AI Chat';
+                }
                 return url || '';
             }
 
@@ -1533,7 +1539,7 @@
                             tab.railTitle.setAttribute('title', tab.title);
                         }
                         if (this.activeTabId === tabId) {
-                            this.urlBar.value = this.getDisplayUrl(webview.getURL());
+                            this.urlBar.value = this.getDisplayUrl(webview.getURL(), tab);
                             this.hideLoading();
                             this.updateActionButtonsVisibility(webview.getURL());
                         }
@@ -1680,7 +1686,7 @@
                     tabFavicon.src = getLoadingFavicon();
                     if (tab.railFavicon) tab.railFavicon.src = getLoadingFavicon();
                     if (this.activeTabId === tabId) {
-                        this.urlBar.value = this.getDisplayUrl(e.url);
+                        this.urlBar.value = this.getDisplayUrl(e.url, tab);
                         this.updateNavBarVisibility(e.url);
                         this.updateActionButtonsVisibility(e.url);
                     }
@@ -1697,7 +1703,7 @@
                     tabFavicon.src = getLoadingFavicon();
                     if (tab.railFavicon) tab.railFavicon.src = getLoadingFavicon();
                     if (this.activeTabId === tabId) {
-                        this.urlBar.value = this.getDisplayUrl(e.url);
+                        this.urlBar.value = this.getDisplayUrl(e.url, tab);
                         this.updateNavBarVisibility(e.url);
                         this.updateActionButtonsVisibility(e.url);
                     }
@@ -2414,7 +2420,7 @@
                         tab.railElement.setAttribute('aria-selected', 'true');
                     }
                     this.activeTabId = tabId;
-                    this.urlBar.value = this.getDisplayUrl(tab.url);
+                    this.urlBar.value = this.getDisplayUrl(tab.url, tab);
                     this.updateNavBarVisibility(tab.url);
                     this.updateActionButtonsVisibility(tab.url);
 
@@ -2533,7 +2539,7 @@
                 tab.url = targetUrl;
 
                 if (this.activeTabId === tab.id) {
-                    this.urlBar.value = this.getDisplayUrl(targetUrl);
+                    this.urlBar.value = this.getDisplayUrl(targetUrl, tab);
                     this.updateNavBarVisibility(targetUrl);
                     this.updateActionButtonsVisibility(targetUrl);
                 }
