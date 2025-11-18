@@ -13,6 +13,7 @@
     <div class="browser-container" role="application" aria-label="AI Browser">
         <!-- Hover trigger zone for collapsed sidebar -->
         <div class="hover-trigger-zone" id="hoverTriggerZone"></div>
+        
         <!-- Left Tab Rail -->
         <aside class="tab-rail" aria-label="Tab Sidebar">
             <div class="tab-rail-header">
@@ -29,6 +30,12 @@
             </div>
             <div class="rail-url">
                 <div class="rail-url-controls">
+                    <button class="nav-btn" id="toggleSidebarBtn" title="Toggle Sidebar (⌘S)" aria-label="Toggle sidebar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <line x1="9" y1="3" x2="9" y2="21" />
+                        </svg>
+                    </button>
                     <button class="nav-btn" id="backBtn" title="Go back (⌘←)" aria-label="Navigate back">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M19 12H5" />
@@ -443,6 +450,7 @@
                 this.newTabBtn = document.getElementById('railNewTabBtn');
                 this.tabRailTabs = document.getElementById('tabRailTabs');
                 this.railNewTabBtn = document.getElementById('railNewTabBtn');
+                this.toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
                 this.backBtn = document.getElementById('backBtn');
                 this.forwardBtn = document.getElementById('forwardBtn');
                 this.refreshBtn = document.getElementById('refreshBtn');
@@ -950,6 +958,7 @@
                 this.newTabBtn.addEventListener('click', () => this.showCommandPalette());
                 
                 // Navigation
+                this.toggleSidebarBtn.addEventListener('click', () => this.toggleSidebarCollapse());
                 this.backBtn.addEventListener('click', () => this.navigateBack());
                 this.forwardBtn.addEventListener('click', () => this.navigateForward());
                 this.refreshBtn.addEventListener('click', () => this.refreshPage());
