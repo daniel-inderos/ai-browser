@@ -393,7 +393,7 @@ textarea:focus {
     width: calc(100% - (var(--spacing-2) * 2));
     padding: 10px 12px;
     border-radius: 14px;
-    background: linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
+    background: var(--color-surface-active);
     border: 1px solid var(--color-border);
     color: var(--color-text-primary);
     cursor: pointer;
@@ -440,7 +440,7 @@ textarea:focus {
     gap: var(--spacing-2);
     padding: 10px 12px;
     border-radius: 14px;
-    background: linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
+    background: var(--color-surface-active);
     border: 1px solid var(--color-border);
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -528,7 +528,7 @@ textarea:focus {
 /* Pinned tab styling */
 .rail-tab.pinned {
     border-top: 3px solid var(--color-primary);
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), var(--color-surface));
+    background: var(--color-surface-active);
 }
 
 .rail-tab.pinned .rail-close-btn {
@@ -540,9 +540,17 @@ textarea:focus {
 }
 
 @media (prefers-color-scheme: dark) {
+    .rail-new-tab-pill {
+        background: var(--color-background-secondary);
+    }
+    
+    .rail-tab {
+        background: var(--color-background-secondary);
+    }
+    
     .rail-tab.pinned {
         border-top: 3px solid var(--color-primary);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), var(--color-surface-elevated));
+        background: var(--color-background-secondary);
     }
 }
 
