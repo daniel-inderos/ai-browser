@@ -5,47 +5,47 @@
     --color-primary: #000000;
     --color-primary-hover: #1a1a1a;
     --color-primary-active: #333333;
-    
+
     --color-surface: #ffffff;
     --color-surface-elevated: #f2f2f2;
     --color-surface-hover: #e6e6e6;
     --color-surface-active: #d9d9d9;
-    
+
     --color-background: #ffffff;
     --color-background-secondary: #f7f7f7;
-    
+
     --color-text-primary: #000000;
     --color-text-secondary: #555555;
     --color-text-tertiary: #777777;
     --color-text-inverse: #ffffff;
-    
+
     --color-border: #dddddd;
     --color-border-hover: #bbbbbb;
     --color-border-focus: #333333;
-    
+
     --color-error: #000000;
     --color-warning: #000000;
     --color-success: #000000;
-    
+
     /* Typography */
     --font-family-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
-    
+
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
     --font-size-base: 1rem;
     --font-size-lg: 1.125rem;
     --font-size-xl: 1.25rem;
-    
+
     --font-weight-normal: 400;
     --font-weight-medium: 500;
     --font-weight-semibold: 600;
     --font-weight-bold: 700;
-    
+
     --line-height-tight: 1.25;
     --line-height-normal: 1.5;
     --line-height-relaxed: 1.625;
-    
+
     /* Spacing System */
     --spacing-0: 0;
     --spacing-1: 0.25rem;
@@ -57,28 +57,29 @@
     --spacing-8: 2rem;
     --spacing-10: 2.5rem;
     --spacing-12: 3rem;
-    
+
     /* Border Radius */
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
     --radius-full: 9999px;
-    
+
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     --shadow-focus: 0 0 0 3px rgb(0 0 0 / 0.1);
-    
+
     /* Transitions */
     --transition-fast: 150ms ease-in-out;
     --transition-normal: 250ms ease-in-out;
     --transition-slow: 350ms ease-in-out;
-    
+
     /* Layout */
     --header-height: 44px;
-    --tab-bar-height: 0px; /* Horizontal tab bar removed */
+    --tab-bar-height: 0px;
+    /* Horizontal tab bar removed */
     --nav-bar-height: 52px;
     --content-padding: var(--spacing-4);
     --tab-rail-width: 260px;
@@ -96,24 +97,24 @@
         --color-primary: #ffffff;
         --color-primary-hover: #e6e6e6;
         --color-primary-active: #cccccc;
-        
+
         --color-surface: #000000;
         --color-surface-elevated: #1a1a1a;
         --color-surface-hover: #333333;
         --color-surface-active: #4d4d4d;
-        
+
         --color-background: #000000;
         --color-background-secondary: #0d0d0d;
-        
+
         --color-text-primary: #ffffff;
         --color-text-secondary: #d0d0d0;
         --color-text-tertiary: #a0a0a0;
         --color-text-inverse: #000000;
-        
+
         --color-border: #333333;
         --color-border-hover: #4d4d4d;
         --color-border-focus: #ffffff;
-        
+
         --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
         --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.25), 0 2px 4px -2px rgb(0 0 0 / 0.25);
         --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.25), 0 4px 6px -4px rgb(0 0 0 / 0.25);
@@ -121,7 +122,9 @@
 }
 
 /* Modern CSS Reset */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -216,8 +219,10 @@ textarea:focus {
 }
 
 .tab-rail.collapsed .tab-rail-header {
-    display: none; /* Hide header completely when collapsed */
-    padding-left: var(--spacing-3); /* Remove traffic light spacing when collapsed */
+    display: none;
+    /* Hide header completely when collapsed */
+    padding-left: var(--spacing-3);
+    /* Remove traffic light spacing when collapsed */
 }
 
 .tab-rail.overlay-visible {
@@ -292,12 +297,15 @@ textarea:focus {
     justify-content: flex-start;
     height: var(--rail-header-height);
     padding: 3px var(--spacing-3);
-    padding-left: 76px; /* Space for macOS traffic lights */
+    padding-left: 76px;
+    /* Space for macOS traffic lights */
     border-bottom: 1px solid var(--color-border);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    background: transparent; /* Fully transparent titlebar */
-    -webkit-app-region: drag; /* Make header draggable on macOS */
+    background: transparent;
+    /* Fully transparent titlebar */
+    -webkit-app-region: drag;
+    /* Make header draggable on macOS */
 }
 
 /* Incognito Indicator */
@@ -312,7 +320,8 @@ textarea:focus {
     font-weight: var(--font-weight-medium);
     color: var(--color-text-secondary);
     user-select: none;
-    -webkit-app-region: no-drag; /* Allow interaction with indicator */
+    -webkit-app-region: no-drag;
+    /* Allow interaction with indicator */
 }
 
 .incognito-indicator svg {
@@ -342,8 +351,9 @@ textarea:focus {
     padding: var(--spacing-2) var(--spacing-2) var(--spacing-2);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    background: linear-gradient(180deg, var(--color-surface) 0%, rgba(0,0,0,0));
-    -webkit-app-region: drag; /* Make URL bar area draggable */
+    background: linear-gradient(180deg, var(--color-surface) 0%, rgba(0, 0, 0, 0));
+    -webkit-app-region: drag;
+    /* Make URL bar area draggable */
     border-bottom: 1px solid var(--color-border);
 }
 
@@ -351,18 +361,24 @@ textarea:focus {
     display: flex;
     gap: var(--spacing-1);
     margin-bottom: var(--spacing-2);
-    -webkit-app-region: no-drag; /* Allow interaction in drag area */
+    -webkit-app-region: no-drag;
+    /* Allow interaction in drag area */
 }
 
 .rail-url-actions {
     display: flex;
     gap: var(--spacing-2);
     margin-top: var(--spacing-1);
-    -webkit-app-region: no-drag; /* Allow interaction in drag area */
+    -webkit-app-region: no-drag;
+    /* Allow interaction in drag area */
 }
 
 /* Make the url bar full width inside the rail */
-.tab-rail .url-input-wrapper { width: 100%; position: relative; }
+.tab-rail .url-input-wrapper {
+    width: 100%;
+    position: relative;
+}
+
 .tab-rail .url-input-wrapper::before {
     content: '';
     position: absolute;
@@ -376,13 +392,17 @@ textarea:focus {
     background: var(--color-text-tertiary);
     opacity: .8;
 }
+
 .tab-rail .url-bar {
     border-radius: var(--radius-xl);
     font-family: var(--font-family-mono);
     padding-left: calc(var(--spacing-4) + 16px);
     box-shadow: var(--shadow-sm);
 }
-.tab-rail .url-bar:focus { box-shadow: var(--shadow-focus), var(--shadow-md); }
+
+.tab-rail .url-bar:focus {
+    box-shadow: var(--shadow-focus), var(--shadow-md);
+}
 
 /* Arc-like New Tab pill */
 .rail-new-tab-pill {
@@ -417,7 +437,7 @@ textarea:focus {
     width: 22px;
     height: 22px;
     border-radius: var(--radius-full);
-    background: rgba(127,127,127,0.12);
+    background: rgba(127, 127, 127, 0.12);
 }
 
 .tab-rail-tabs {
@@ -428,7 +448,11 @@ textarea:focus {
     flex-direction: column;
     gap: var(--spacing-1);
 }
-.tab-rail-tabs::-webkit-scrollbar { width: 8px; }
+
+.tab-rail-tabs::-webkit-scrollbar {
+    width: 8px;
+}
+
 .tab-rail-tabs::-webkit-scrollbar-thumb {
     background: var(--color-border);
     border-radius: 8px;
@@ -543,11 +567,11 @@ textarea:focus {
     .rail-new-tab-pill {
         background: var(--color-background-secondary);
     }
-    
+
     .rail-tab {
         background: var(--color-background-secondary);
     }
-    
+
     .rail-tab.pinned {
         border-top: 3px solid var(--color-primary);
         background: var(--color-background-secondary);
@@ -555,9 +579,16 @@ textarea:focus {
 }
 
 /* Shift top bars and content to the right of the rail */
-.tab-bar { display: none; height: 0; padding: 0; border: none; }
+.tab-bar {
+    display: none;
+    height: 0;
+    padding: 0;
+    border: none;
+}
 
-.nav-bar { display: none; }
+.nav-bar {
+    display: none;
+}
 
 /* Layout rules for content area - merged with main definition below */
 .browser-container:has(.tab-rail.collapsed) .content-area {
@@ -577,9 +608,13 @@ textarea:focus {
 }
 
 /* Tab Bar Styles */
-.tab-bar { display: none; }
+.tab-bar {
+    display: none;
+}
 
-.tabs-container { display: none; }
+.tabs-container {
+    display: none;
+}
 
 .tabs-container::-webkit-scrollbar {
     display: none;
@@ -679,7 +714,9 @@ textarea:focus {
     height: 12px;
 }
 
-.new-tab-btn { display: none; }
+.new-tab-btn {
+    display: none;
+}
 
 /* Navigation Bar Styles */
 .nav-bar {
@@ -716,7 +753,8 @@ textarea:focus {
     cursor: pointer;
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-sm);
-    -webkit-app-region: no-drag; /* Allow interaction in drag area */
+    -webkit-app-region: no-drag;
+    /* Allow interaction in drag area */
 }
 
 .nav-btn:hover:not(:disabled) {
@@ -753,7 +791,8 @@ textarea:focus {
 .url-input-wrapper {
     flex: 1;
     position: relative;
-    -webkit-app-region: no-drag; /* Allow interaction in drag area */
+    -webkit-app-region: no-drag;
+    /* Allow interaction in drag area */
 }
 
 .url-bar {
@@ -770,7 +809,8 @@ textarea:focus {
     box-shadow: var(--shadow-sm);
     -webkit-user-select: text;
     user-select: text;
-    -webkit-app-region: no-drag; /* Allow interaction in drag area */
+    -webkit-app-region: no-drag;
+    /* Allow interaction in drag area */
 }
 
 .url-bar::placeholder {
@@ -811,7 +851,8 @@ textarea:focus {
     cursor: pointer;
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-md);
-    -webkit-app-region: no-drag; /* Allow interaction in drag area */
+    -webkit-app-region: no-drag;
+    /* Allow interaction in drag area */
     min-width: 60px;
     display: flex;
     align-items: center;
@@ -855,7 +896,8 @@ webview {
     border: none;
     border-radius: var(--page-corner-radius-inner);
     background: var(--color-surface);
-    -webkit-app-region: no-drag; /* Webview content shouldn't be draggable */
+    -webkit-app-region: no-drag;
+    /* Webview content shouldn't be draggable */
 }
 
 .webview-container {
@@ -902,8 +944,13 @@ webview {
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .error-page {
@@ -955,18 +1002,39 @@ webview {
 
 /* Enhanced Animations */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes slideIn {
-    from { transform: translateX(-100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 .tab {
@@ -988,29 +1056,29 @@ webview {
         max-width: 200px;
         padding: 0 var(--spacing-2);
     }
-    
+
     .nav-btn {
         width: 32px;
         height: 32px;
         font-size: var(--font-size-sm);
     }
-    
+
     .url-bar {
         padding: var(--spacing-2) var(--spacing-3);
         font-size: var(--font-size-xs);
     }
-    
+
     .go-btn {
         padding: var(--spacing-2) var(--spacing-3);
         font-size: var(--font-size-xs);
         min-width: 50px;
     }
-    
+
     .content-area {
         margin: var(--spacing-1);
         border-radius: var(--radius-md) var(--radius-md) 0 0;
     }
-    
+
     .nav-bar {
         padding: var(--spacing-2);
         gap: var(--spacing-2);
@@ -1056,7 +1124,10 @@ webview {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+
+    *,
+    *::before,
+    *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
@@ -1095,7 +1166,8 @@ webview {
     cursor: pointer;
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-sm);
-    -webkit-app-region: no-drag; /* Allow interaction in drag area */
+    -webkit-app-region: no-drag;
+    /* Allow interaction in drag area */
 }
 
 /* Copy URL Button - Inside URL Bar */
@@ -1119,7 +1191,8 @@ webview {
     transition: all var(--transition-fast);
     opacity: 0;
     visibility: hidden;
-    -webkit-app-region: no-drag; /* Allow interaction in drag area */
+    -webkit-app-region: no-drag;
+    /* Allow interaction in drag area */
     z-index: 10;
 }
 
@@ -1226,11 +1299,13 @@ webview {
     gap: var(--spacing-2);
     margin-bottom: var(--spacing-2);
     overflow-x: auto;
-    padding-bottom: var(--spacing-1); /* Room for scrollbar */
+    padding-bottom: var(--spacing-1);
+    /* Room for scrollbar */
 }
 
 .context-pills-container::-webkit-scrollbar {
-    display: none; /* Hide scrollbar for a cleaner look */
+    display: none;
+    /* Hide scrollbar for a cleaner look */
 }
 
 .context-pill {
@@ -1266,6 +1341,7 @@ webview {
     align-items: center;
     justify-content: center;
 }
+
 .context-pill-remove:hover {
     background: var(--color-surface-active);
     color: var(--color-text-primary);
@@ -1341,6 +1417,7 @@ webview {
     margin: 0;
     padding: 0;
 }
+
 .chat-clear-btn:hover {
     background: var(--color-error);
     color: var(--color-text-inverse);
@@ -1390,16 +1467,21 @@ webview {
     border-bottom: 1px solid var(--color-border);
     font-size: var(--font-size-sm);
 }
+
 .suggestion-item:last-child {
     border-bottom: none;
 }
-.suggestion-item:hover, .suggestion-item.selected {
+
+.suggestion-item:hover,
+.suggestion-item.selected {
     background: var(--color-surface-hover);
 }
+
 .suggestion-title {
     font-weight: var(--font-weight-medium);
     color: var(--color-text-primary);
 }
+
 .suggestion-url {
     font-size: var(--font-size-xs);
     color: var(--color-text-tertiary);
@@ -1461,6 +1543,7 @@ webview {
 .chat-msg:last-child {
     margin-bottom: 0;
 }
+
 .user-msg {
     text-align: right;
     color: var(--color-text-primary);
@@ -1472,6 +1555,7 @@ webview {
     margin-left: auto;
     max-width: 80%;
 }
+
 .assistant-msg {
     text-align: left;
     color: var(--color-text-secondary);
@@ -1487,9 +1571,11 @@ webview {
     margin-bottom: var(--spacing-1);
     flex-shrink: 0;
 }
+
 .user-msg .chat-label {
     margin-bottom: 0;
 }
+
 .chat-content {
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -1516,7 +1602,8 @@ webview {
     margin-bottom: 0.25rem;
 }
 
-.chat-content ul, .chat-content ol {
+.chat-content ul,
+.chat-content ol {
     padding-left: var(--spacing-5);
     margin: 0;
     padding-top: 0;
@@ -1649,16 +1736,20 @@ webview {
     0% {
         left: -100%;
     }
+
     100% {
         left: 100%;
     }
 }
 
 @keyframes search-pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 0.8;
         transform: scale(1);
     }
+
     50% {
         opacity: 1;
         transform: scale(1.1);
@@ -1742,7 +1833,7 @@ webview {
     max-width: 680px;
     background: var(--color-surface-elevated);
     border-radius: var(--radius-xl);
-    box-shadow: 
+    box-shadow:
         0 0 0 1px rgba(0, 0, 0, 0.1),
         0 8px 32px rgba(0, 0, 0, 0.2);
     border: 1px solid var(--color-border);
@@ -2008,12 +2099,14 @@ webview {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .command-palette-backdrop,
     .command-palette,
     .command-palette-result-item {
@@ -2112,15 +2205,15 @@ webview {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-.toggle-switch input:checked + .toggle-slider {
+.toggle-switch input:checked+.toggle-slider {
     background-color: rgb(34, 197, 94);
 }
 
-.toggle-switch input:checked + .toggle-slider:before {
+.toggle-switch input:checked+.toggle-slider:before {
     transform: translateX(20px);
 }
 
-.toggle-switch input:focus + .toggle-slider {
+.toggle-switch input:focus+.toggle-slider {
     box-shadow: 0 0 1px rgb(34, 197, 94);
 }
 
@@ -2164,15 +2257,16 @@ webview {
     }
 }
 
-/* Quit Confirmation Dialog - Large and Prominent */
+/* Quit Confirmation Dialog - Modern & Glassmorphic */
 .quit-dialog-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2180,17 +2274,11 @@ webview {
     animation: fadeIn 0.2s ease-out;
 }
 
-/* Dark mode overlay - lighter backdrop for better contrast */
-@media (prefers-color-scheme: dark) {
-    .quit-dialog-overlay {
-        background-color: rgba(0, 0, 0, 0.75);
-    }
-}
-
 @keyframes fadeIn {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -2199,85 +2287,74 @@ webview {
 .quit-dialog {
     background: var(--color-surface);
     border-radius: var(--radius-xl);
-    padding: 3rem 4rem;
-    max-width: 600px;
-    width: 90%;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--color-border);
-    animation: slideUp 0.3s ease-out;
+    padding: var(--spacing-8);
+    width: 440px;
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-border);
+    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 2rem;
+    gap: var(--spacing-8);
+    transform-origin: center center;
 }
 
-@keyframes slideUp {
+@keyframes scaleIn {
     from {
-        transform: translateY(20px);
+        transform: scale(0.95);
         opacity: 0;
     }
+
     to {
-        transform: translateY(0);
+        transform: scale(1);
         opacity: 1;
     }
 }
 
-.quit-dialog-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: #dc2626;
+.quit-dialog-content {
+    text-align: center;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-text-inverse);
-    flex-shrink: 0;
-}
-
-.quit-dialog-icon svg {
-    width: 48px;
-    height: 48px;
+    flex-direction: column;
+    gap: var(--spacing-3);
 }
 
 .quit-dialog-title {
-    font-size: 2rem;
-    font-weight: var(--font-weight-bold);
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-semibold);
     color: var(--color-text-primary);
     margin: 0;
-    text-align: center;
     line-height: var(--line-height-tight);
 }
 
 .quit-dialog-message {
-    font-size: 1.125rem;
+    font-size: var(--font-size-base);
     color: var(--color-text-secondary);
     margin: 0;
-    text-align: center;
     line-height: var(--line-height-normal);
 }
 
 .quit-dialog-buttons {
     display: flex;
-    gap: 1rem;
+    gap: var(--spacing-4);
     width: 100%;
-    margin-top: 0.5rem;
 }
 
 .quit-dialog-btn {
     flex: 1;
-    padding: 1rem 2rem;
-    font-size: 1.125rem;
-    font-weight: var(--font-weight-semibold);
+    padding: var(--spacing-3) var(--spacing-4);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
     border-radius: var(--radius-md);
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     cursor: pointer;
     transition: all var(--transition-fast);
     outline: none;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .quit-dialog-btn:focus-visible {
-    outline: 2px solid var(--color-border-focus);
-    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-primary);
 }
 
 .quit-dialog-btn-cancel {
@@ -2293,52 +2370,36 @@ webview {
 
 .quit-dialog-btn-cancel:active {
     background: var(--color-surface-active);
+    transform: translateY(1px);
 }
 
 .quit-dialog-btn-quit {
-    background: #dc2626;
+    background: var(--color-primary);
     color: var(--color-text-inverse);
+    border-color: transparent;
+    box-shadow: var(--shadow-sm);
 }
 
 .quit-dialog-btn-quit:hover {
-    background: #b91c1c;
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
 .quit-dialog-btn-quit:active {
-    background: #991b1b;
+    background: var(--color-primary-active);
+    transform: translateY(0);
+    box-shadow: none;
 }
 
-/* Dark theme adjustments for quit dialog */
+/* Dark theme adjustments */
 @media (prefers-color-scheme: dark) {
+    .quit-dialog-overlay {
+        background-color: rgba(0, 0, 0, 0.6);
+    }
+
     .quit-dialog {
         background: var(--color-surface-elevated);
-        border-color: rgba(255, 255, 255, 0.1);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
-    }
-
-    .quit-dialog-icon {
-        background: #dc2626;
-    }
-
-    .quit-dialog-btn-cancel {
-        background: var(--color-surface-hover);
-        border-color: rgba(255, 255, 255, 0.15);
-    }
-
-    .quit-dialog-btn-cancel:hover {
-        background: var(--color-surface-active);
-        border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .quit-dialog-btn-quit {
-        background: #dc2626;
-    }
-
-    .quit-dialog-btn-quit:hover {
-        background: #b91c1c;
-    }
-
-    .quit-dialog-btn-quit:active {
-        background: #991b1b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 }
