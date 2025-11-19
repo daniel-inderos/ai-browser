@@ -440,6 +440,35 @@ textarea:focus {
     background: rgba(127, 127, 127, 0.12);
 }
 
+.tab-rail-favorites {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-2);
+    padding: var(--spacing-2);
+    padding-bottom: 0;
+}
+
+.tab-rail-favorites .rail-tab {
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 12px;
+    aspect-ratio: 1;
+    width: 100%;
+    height: auto;
+}
+
+.tab-rail-favorites .rail-tab .rail-title,
+.tab-rail-favorites .rail-tab .rail-close-btn {
+    display: none;
+}
+
+.tab-rail-favorites .rail-tab .rail-favicon {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+}
+
 .tab-rail-tabs {
     flex: 1;
     overflow-y: auto;

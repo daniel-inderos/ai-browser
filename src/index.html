@@ -99,6 +99,7 @@
                 <div class="rail-url-actions">
                 </div>
             </div>
+            <div class="tab-rail-favorites" id="tabRailFavorites" role="listbox" aria-label="Favorite Tabs"></div>
             <button class="rail-new-tab-pill" id="railNewTabBtn" title="New Tab (⌘T)" aria-label="Open new tab">
                 <span class="plus">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -461,6 +462,7 @@
                 this.tabsContainer = document.getElementById('tabsContainer');
                 this.newTabBtn = document.getElementById('railNewTabBtn');
                 this.tabRailTabs = document.getElementById('tabRailTabs');
+                this.tabRailFavorites = document.getElementById('tabRailFavorites');
                 this.railNewTabBtn = document.getElementById('railNewTabBtn');
                 this.toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
                 this.backBtn = document.getElementById('backBtn');
@@ -1466,11 +1468,16 @@
                         window.electronAPI.showTabContextMenu(tabId, e.clientX, e.clientY, tab.isMuted, tab.isPinned);
                     });
 
-                    this.tabRailTabs.appendChild(railElement);
-
                     tab.railElement = railElement;
                     tab.railTitle = railTitle;
                     tab.railFavicon = railFavicon;
+
+                    if (tab.isPinned) {
+                        this.tabRailFavorites.appendChild(railElement);
+                        railElement.classList.add('favorite');
+                    } else {
+                        this.tabRailTabs.appendChild(railElement);
+                    }
                 }
 
                 // Create webview with enhanced loading states
@@ -2700,16 +2707,16 @@
                 // Show toast notification
                 this.showToast('Tab duplicated');
             }
-
             handlePinTab(tabId) {
                 const tab = this.tabs.find(t => t.id === tabId);
                 if (!tab) return;
 
                 // Toggle pin state
                 tab.isPinned = !tab.isPinned;
-                if (tab.isPinned) {
+                // If pinning (favoriting), set current URL as home URL if not set
+                if (tab.isPinned && !tab.pinnedHomeUrl) {
                     tab.pinnedHomeUrl = this.getEffectiveTabUrl(tab);
-                } else {
+                } else if (!tab.isPinned) {
                     tab.pinnedHomeUrl = null;
                 }
 
@@ -2723,7 +2730,7 @@
                 this.saveTabsDebounced();
 
                 // Show toast notification
-                const message = tab.isPinned ? 'Tab pinned' : 'Tab unpinned';
+                const message = tab.isPinned ? 'Tab added to favorites' : 'Tab removed from favorites';
                 this.showToast(message);
             }
 
@@ -2778,12 +2785,22 @@
                 const pinnedTabs = this.tabs.filter(t => t.isPinned);
                 const unpinnedTabs = this.tabs.filter(t => !t.isPinned);
 
-                // Clear the rail container
+                // Clear the rail containers
                 this.tabRailTabs.innerHTML = '';
+                this.tabRailFavorites.innerHTML = '';
 
-                // Add pinned tabs first, then unpinned tabs
-                [...pinnedTabs, ...unpinnedTabs].forEach(tab => {
+                // Add pinned tabs to favorites container
+                pinnedTabs.forEach(tab => {
                     if (tab.railElement) {
+                        tab.railElement.classList.add('favorite');
+                        this.tabRailFavorites.appendChild(tab.railElement);
+                    }
+                });
+
+                // Add unpinned tabs to regular container
+                unpinnedTabs.forEach(tab => {
+                    if (tab.railElement) {
+                        tab.railElement.classList.remove('favorite');
                         this.tabRailTabs.appendChild(tab.railElement);
                     }
                 });

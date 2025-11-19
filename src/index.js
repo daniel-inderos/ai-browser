@@ -643,7 +643,7 @@ ipcMain.on('tab-context-menu', (event, { tabId, x, y, isMuted, isPinned }) => {
       }
     },
     {
-      label: isPinned ? 'Unpin Tab' : 'Pin Tab',
+      label: isPinned ? 'Unfavorite Tab' : 'Favorite Tab',
       click: () => {
         focusedWindow.webContents.send('pin-tab', { tabId });
       }
