@@ -13,6 +13,9 @@ let stats = {
   totalAllowed: 0
 };
 
+// Track the last known blocker stats to compute delta
+let lastBlockerStats = { blocked: 0, allowed: 0 };
+
 // Load saved settings on module initialization
 function loadSavedSettings() {
   const saved = storageHelper.loadAdBlockerSettings();
@@ -104,9 +107,6 @@ async function initializeAdBlocker(defaultSession) {
   
   return blocker;
 }
-
-// Track the last known blocker stats to compute delta
-let lastBlockerStats = { blocked: 0, allowed: 0 };
 
 // Sync stats from blocker's internal tracking
 function syncStatsFromBlocker(blockerStats) {
